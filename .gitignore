@@ -1,0 +1,7 @@
+*.pyc
+*.ini
+.claude
+.pytest_cache
+.venv
+htmlcov
+.coverage

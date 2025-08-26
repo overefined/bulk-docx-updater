@@ -149,7 +149,7 @@ python main.py <path> --search "old" --replace "new" # Single replacement
 python main.py <path> --recursive                    # Process subdirectories
 python main.py <path> --dry-run                      # Preview changes only
 python main.py <path> --dry-run --diff-context 1     # Fewer surrounding lines in unified diff
-python main.py <path> --dry-run --xml-diff --xml-diff-sections Body(XML) Headers/Footers(XML)
+python main.py <path> --dry-run --xml-diff           # Include XML-level diffs
 python main.py <path> --verbose                      # Enable debug logging (internal)
 ```
 
@@ -220,6 +220,38 @@ Clean up document structure while replacing text:
 python main.py "/path/to/templates" -c replace.json
 python main.py "/path/to/test" -c replace.json --dry-run --xml-diff
 python main.py "/path/to/document.docx" --inspect-xml
+```
+
+## Performance Profiling
+
+The tool includes a performance profiler to analyze processing speed and identify bottlenecks:
+
+```bash
+# Activate virtual environment first
+source .venv/bin/activate
+
+# Run performance profiling (requires profile_test_templates/ directory with DOCX files)
+python profile_performance.py
+```
+
+### Profiling Features
+
+- **CPU Profiling**: Analyzes function call times and identifies bottlenecks
+- **Memory Analysis**: Tracks memory allocation during document processing
+- **Module-Specific Analysis**: Focuses on custom modules (document_processor, text_replacement, formatting)
+- **Interactive Profile**: Saves detailed profile data for further analysis
+
+### Profiling Output
+
+The profiler generates:
+- Top 20 functions by cumulative time
+- Module-specific performance breakdown
+- Memory usage analysis with top allocations
+- Detailed profile file (`profile_results.prof`) for interactive analysis
+
+```bash
+# View interactive profile after running profiler
+python -m pstats profile_results.prof
 ```
 
 ## Running Tests

@@ -1,64 +1,8 @@
 {
   "replacements": [
     {
-      "search": "{{ o2_qaqc.run1 }}",
-      "replace": "{{ o2_qaqc.run1_O2 }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run2 }}",
-      "replace": "{{ o2_qaqc.run2_O2 }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run3 }}",
-      "replace": "{{ o2_qaqc.run3_O2 }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run1_no2 }}",
-      "replace": "{{ o2_qaqc.run1_NO2 }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run2_no2 }}",
-      "replace": "{{ o2_qaqc.run2_NO2 }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run3_no2 }}",
-      "replace": "{{ o2_qaqc.run3_NO2 }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run1_no }}",
-      "replace": "{{ o2_qaqc.run1_NO }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run2_no }}",
-      "replace": "{{ o2_qaqc.run2_NO }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run3_no }}",
-      "replace": "{{ o2_qaqc.run3_NO }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run1_no_adjusted }}",
-      "replace": "{{ o2_qaqc.run1_NO_adjusted }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run2_no_adjusted }}",
-      "replace": "{{ o2_qaqc.run2_NO_adjusted }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run3_no_adjusted }}",
-      "replace": "{{ o2_qaqc.run3_NO_adjusted }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run1_nO2_adjusted }}",
-      "replace": "{{ o2_qaqc.run1_NO2_adjusted }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run2_nO2_adjusted }}",
-      "replace": "{{ o2_qaqc.run2_NO2_adjusted }}"
-    },
-    {
-      "search": "{{ o2_qaqc.run3_nO2_adjusted }}",
-      "replace": "{{ o2_qaqc.run3_NO2_adjusted }}"
+      "search": "{{ o2_qaqc.runavg }}",
+      "replace": "{{ o2_qaqc.runavg_O2 }}"
     }
   ]
 }

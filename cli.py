@@ -27,7 +27,6 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Show what would be changed without making changes")
     parser.add_argument("--xml-diff", action="store_true", help="Include XML-level diffs in dry-run output")
     parser.add_argument("--diff-context", type=int, default=3, help="Unified diff context lines (default: 3)")
-    parser.add_argument("--xml-diff-sections", nargs="*", choices=["Body(XML)", "Tables(XML)", "Headers/Footers(XML)"], help="Restrict XML diff to specific sections")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging for debugging")
     parser.add_argument("--standardize-margins", action="store_true", help="Standardize margins across all documents")
     parser.add_argument("--margins", help="Comma-separated margins in inches (top,bottom,left,right) or preset name (letter,legal,a4)")
@@ -133,11 +132,7 @@ def main():
                     # Optionally include XML-level diffs
                     if args.xml_diff:
                         xml_changes = updater.get_document_xml_changes_preview(file_path)
-                        # Filter sections if requested
-                        items = xml_changes.items()
-                        if args.xml_diff_sections:
-                            items = [(k, v) for k, v in items if k in set(args.xml_diff_sections)]
-                        for section_name, (original_lines, modified_lines) in items:
+                        for section_name, (original_lines, modified_lines) in xml_changes.items():
                             print(f"\n--- {section_name} ---")
                             diff_output = updater.format_diff(original_lines, modified_lines, section_name)
                             print(diff_output)

@@ -6,12 +6,15 @@ including alignment changes that require creating new paragraphs.
 """
 from __future__ import annotations
 import re
+import xml.etree.ElementTree as ET
 from typing import List, Dict, Optional, Tuple
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
+from docx.oxml.ns import nsdecls
 from docx.text.paragraph import Paragraph
 
 from formatting import FormattingProcessor
+from font_utils import FontFormatter
 
 
 class TextReplacer:
@@ -20,6 +23,48 @@ class TextReplacer:
     def __init__(self, replacements: List[Dict[str, str]], formatting_processor: FormattingProcessor):
         self.replacements = replacements
         self.formatter = formatting_processor
+        # Cache compiled regex patterns for performance
+        self._compiled_patterns = {}
+        self._precompile_patterns()
+        # Cache page break information per paragraph to avoid repeated expensive checks
+        self._page_break_cache = {}
+        # Cache search patterns for quick lookup
+        self._search_patterns = self._extract_search_patterns()
+        self._search_patterns_set = set(self._search_patterns) if self._search_patterns else set()
+        
+        # Additional caches to reduce repeated extractions
+        self._text_cache = {}  # Cache paragraph texts
+        self._xml_cache = {}   # Cache paragraph XML to reduce xpath calls
+        # Cache paragraph page break information
+        self._paragraph_has_page_breaks_cache = {}
+        
+    def _extract_search_patterns(self) -> List[str]:
+        """Extract all search patterns for quick lookup."""
+        patterns = []
+        for replacement in self.replacements:
+            if 'search' in replacement and ('replace' in replacement or 'insert_after' in replacement):
+                patterns.append(replacement['search'])
+        return patterns
+        self._paragraph_has_page_breaks_cache = {}
+    
+    def _precompile_patterns(self):
+        """Pre-compile regex patterns for all replacements to improve performance."""
+        for i, replacement in enumerate(self.replacements):
+            if 'search' not in replacement:
+                continue
+            search_text = replacement['search']
+            use_regex = bool(replacement.get('regex'))
+            ignore_case = bool(replacement.get('ignore_case'))
+            flags = re.IGNORECASE if ignore_case else 0
+            pattern = re.compile(search_text if use_regex else re.escape(search_text), flags)
+            self._compiled_patterns[i] = pattern
+    
+    def clear_caches(self):
+        """Clear all caches to free memory."""
+        self._page_break_cache.clear()
+        self._text_cache.clear()
+        self._xml_cache.clear()
+    
     
     def replace_text_across_paragraphs(self, paragraphs: List[Paragraph]) -> bool:
         """Handle text replacement across multiple consecutive paragraphs."""
@@ -28,87 +73,103 @@ class TextReplacer:
         
         # Find which paragraphs actually contain parts of the search patterns
         for replacement in self.replacements:
-            if 'search' not in replacement:
-                continue
-            if not ('replace' in replacement or 'insert_after' in replacement):
+            if not self._is_valid_replacement(replacement):
                 continue
                 
             search_text = replacement['search']
             
-            # Find paragraphs that together contain the complete search text
-            combined_text = "".join(para.text for para in paragraphs)
-            
-            if search_text not in combined_text:
+            # Quick check: does the pattern exist across paragraphs?
+            if not self._pattern_spans_paragraphs(paragraphs, search_text):
                 continue
-            
-            # Check if this pattern actually spans paragraphs
-            spans_paragraphs = True
-            for para in paragraphs:
-                if search_text in para.text:
-                    spans_paragraphs = False
-                    break
-            
-            if not spans_paragraphs:
-                continue  # Let single-paragraph processing handle this
-            
-            # Find the exact paragraphs involved in this pattern
-            # Strategy: Find the first paragraph that starts the pattern and the last that completes it
-            
-            # Find where the pattern starts
-            start_para_idx = None
-            for i, para in enumerate(paragraphs):
-                # Check if this paragraph contains the beginning of our search text
-                para_text = para.text
-                if para_text and search_text.startswith(para_text[:50]):  # Check first 50 chars
-                    start_para_idx = i
-                    break
-                # Also check for partial matches at the end of paragraph
-                for j in range(1, min(len(para_text), len(search_text)) + 1):
-                    if search_text.startswith(para_text[-j:]):
-                        start_para_idx = i
-                        break
-                if start_para_idx is not None:
-                    break
-            
-            if start_para_idx is None:
-                continue  # Couldn't find start of pattern
-            
-            # Now find consecutive paragraphs until we have the complete pattern
-            affected_paragraphs = []
-            accumulated_text = ""
-            
-            for i in range(start_para_idx, len(paragraphs)):
-                accumulated_text += paragraphs[i].text
-                affected_paragraphs.append(i)
                 
-                # Check if we now have the complete search pattern
-                if search_text in accumulated_text:
-                    break
-            
+            # Find the paragraphs involved in this cross-paragraph pattern
+            affected_paragraphs = self._find_affected_paragraphs(paragraphs, search_text)
             if not affected_paragraphs:
                 continue
             
-            # Combine text only from affected paragraphs
-            affected_combined_text = "".join(paragraphs[i].text for i in affected_paragraphs)
-            
-            # Apply the replacement
-            new_text, modified = self.apply_text_replacements(affected_combined_text)
-            
-            if not modified:
-                continue
-            
-            # Put the new text in the first affected paragraph
-            first_para_idx = affected_paragraphs[0]
-            first_paragraph = paragraphs[first_para_idx]
-            self._rebuild_paragraph_with_text(first_paragraph, new_text)
-            
-            # Clear the remaining affected paragraphs
-            for para_idx in affected_paragraphs[1:]:
-                self._clear_paragraph(paragraphs[para_idx])
-            
-            return True
+            # Apply replacement to the combined text
+            if self._apply_cross_paragraph_replacement(paragraphs, affected_paragraphs, replacement):
+                return True
         
         return False
+    
+    def _is_valid_replacement(self, replacement: Dict) -> bool:
+        """Check if replacement is valid for processing."""
+        return ('search' in replacement and 
+                ('replace' in replacement or 'insert_after' in replacement))
+    
+    def _pattern_spans_paragraphs(self, paragraphs: List[Paragraph], search_text: str) -> bool:
+        """Check if pattern spans across multiple paragraphs."""
+        combined_text = "".join(para.text for para in paragraphs)
+        if search_text not in combined_text:
+            return False
+            
+        # Check if this pattern actually spans paragraphs
+        for para in paragraphs:
+            if search_text in para.text:
+                return False  # Found in single paragraph
+        return True
+    
+    def _find_affected_paragraphs(self, paragraphs: List[Paragraph], search_text: str) -> List[int]:
+        """Find paragraph indices that contain parts of the search pattern."""
+        # Find where the pattern starts
+        start_idx = self._find_pattern_start(paragraphs, search_text)
+        if start_idx is None:
+            return []
+        
+        # Find consecutive paragraphs until we have the complete pattern
+        affected_paragraphs = []
+        accumulated_text = ""
+        
+        for i in range(start_idx, len(paragraphs)):
+            accumulated_text += paragraphs[i].text
+            affected_paragraphs.append(i)
+            
+            # Check if we now have the complete search pattern
+            if search_text in accumulated_text:
+                break
+                
+        return affected_paragraphs
+    
+    def _find_pattern_start(self, paragraphs: List[Paragraph], search_text: str) -> Optional[int]:
+        """Find the paragraph where the cross-paragraph pattern starts."""
+        for i, para in enumerate(paragraphs):
+            para_text = para.text
+            if not para_text:
+                continue
+                
+            # Check if this paragraph contains the beginning of our search text
+            if search_text.startswith(para_text[:50]):  # Check first 50 chars
+                return i
+                
+            # Also check for partial matches at the end of paragraph
+            for j in range(1, min(len(para_text), len(search_text)) + 1):
+                if search_text.startswith(para_text[-j:]):
+                    return i
+        return None
+    
+    def _apply_cross_paragraph_replacement(self, paragraphs: List[Paragraph], 
+                                         affected_indices: List[int], 
+                                         replacement: Dict) -> bool:
+        """Apply replacement to cross-paragraph text and update paragraphs."""
+        # Combine text only from affected paragraphs
+        combined_text = "".join(paragraphs[i].text for i in affected_indices)
+        
+        # Apply the replacement
+        new_text, modified = self.apply_text_replacements(combined_text)
+        
+        if not modified:
+            return False
+        
+        # Put the new text in the first affected paragraph
+        first_paragraph = paragraphs[affected_indices[0]]
+        self._rebuild_paragraph_with_text(first_paragraph, new_text)
+        
+        # Clear the remaining affected paragraphs
+        for para_idx in affected_indices[1:]:
+            self._clear_paragraph(paragraphs[para_idx])
+        
+        return True
     
     def _rebuild_paragraph_with_text(self, paragraph: Paragraph, new_text: str, preserve_advanced_formatting: bool = False):
         """Rebuild paragraph with new text while preserving formatting.
@@ -126,14 +187,7 @@ class TextReplacer:
     def _rebuild_paragraph_basic(self, paragraph: Paragraph, new_text: str):
         """Basic paragraph rebuilding for cross-paragraph replacements."""
         # Store original formatting from first run if available
-        original_font_formatting = {}
-        if paragraph.runs:
-            first_run = paragraph.runs[0]
-            if hasattr(first_run, 'font'):
-                original_font_formatting['font_name'] = first_run.font.name
-                original_font_formatting['font_size'] = first_run.font.size
-                original_font_formatting['bold'] = first_run.bold
-                original_font_formatting['italic'] = first_run.italic
+        original_font_formatting = FontFormatter.get_base_font_formatting(paragraph.runs)
         
         # Clear all runs
         self._clear_paragraph(paragraph)
@@ -147,67 +201,73 @@ class TextReplacer:
                 run = paragraph.add_run(text)
                 
                 # Apply original formatting as base
-                if original_font_formatting.get('font_name'):
-                    run.font.name = original_font_formatting['font_name']
-                if original_font_formatting.get('font_size'):
-                    run.font.size = original_font_formatting['font_size']
-                if original_font_formatting.get('bold'):
-                    run.bold = original_font_formatting['bold']
-                if original_font_formatting.get('italic'):
-                    run.italic = original_font_formatting['italic']
+                FontFormatter.apply_font_properties(run, original_font_formatting)
                 
                 # Apply new formatting from tokens
                 self.formatter.apply_formatting_to_run(run, formatting, paragraph)
     
     def _rebuild_paragraph_advanced(self, paragraph: Paragraph, new_text: str):
         """Advanced paragraph rebuilding with sophisticated formatting preservation."""
-        # Store original run formatting and detect leading whitespace BEFORE clearing runs
+        # Extract formatting information before modifying paragraph
+        formatting_context = self._extract_formatting_context(paragraph)
+        
+        # Clear paragraph content while preserving structure
+        self._clear_paragraph_preserving_structure(paragraph)
+        
+        # Process the new text for formatting tokens
+        text_segments = self.formatter.process_formatting_tokens(new_text, paragraph)
+        
+        # Apply the segments based on their formatting requirements
+        if self._requires_special_handling(text_segments):
+            self._handle_alignment_segments(paragraph, text_segments, 
+                                          formatting_context['first_run'], 
+                                          formatting_context['leading_whitespace'],
+                                          formatting_context['run_formats'])
+        else:
+            self._apply_text_segments_to_paragraph(paragraph, text_segments, 
+                                                 formatting_context['run_formats'], 
+                                                 formatting_context['leading_whitespace'])
+    
+    def _extract_formatting_context(self, paragraph: Paragraph) -> Dict:
+        """Extract formatting context from paragraph before modification."""
         original_runs = list(paragraph.runs)
         original_formatting = []
         leading_whitespace_runs = []
         
+        # Extract run formatting
         for run in original_runs:
-            formatting = {
-                'font_name': run.font.name,
-                'font_size': run.font.size,
-                'bold': run.font.bold,
-                'italic': run.font.italic,
-                'underline': run.font.underline
-            }
+            formatting = FontFormatter.extract_font_properties(run)
             original_formatting.append(formatting)
         
-        # Check if the original text had leading newlines/whitespace that we need to preserve
+        # Find leading whitespace runs
         for run in original_runs:
-            # Check if this run contains only whitespace characters
             if run.text and all(c in '\n \t' for c in run.text):
-                # This run contains only whitespace - preserve it
                 leading_whitespace_runs.append(run.text)
             else:
-                # Found first non-whitespace run, stop looking for leading whitespace
                 break
         
-        # Clear all runs
-        for run in original_runs:
+        return {
+            'original_runs': original_runs,
+            'run_formats': original_formatting,
+            'leading_whitespace': leading_whitespace_runs,
+            'first_run': original_runs[0] if original_runs else None
+        }
+    
+    def _clear_paragraph_preserving_structure(self, paragraph: Paragraph):
+        """Clear paragraph content while preserving the first run structure."""
+        # Clear all run text
+        for run in paragraph.runs:
             run.text = ''
         
         # Remove all but the first run
         while len(paragraph.runs) > 1:
             last_run = paragraph.runs[-1]
             last_run._element.getparent().remove(last_run._element)
-        
-        # Process the new text for formatting tokens and create new runs
-        text_segments = self.formatter.process_formatting_tokens(new_text, paragraph)
-        
-        # Check if any segment has alignment formatting or paragraph breaks
-        has_alignment_segments = any(seg_formatting.get('alignment') for _, seg_formatting in text_segments)
-        has_paragraph_breaks = any(seg_formatting.get('paragraph_break_after') for _, seg_formatting in text_segments)
-        
-        if has_alignment_segments or has_paragraph_breaks:
-            # Handle alignment and paragraph breaks by creating separate paragraphs
-            self._handle_alignment_segments(paragraph, text_segments, original_runs[0] if original_runs else None, leading_whitespace_runs, original_formatting)
-        else:
-            # No alignment, rebuild runs normally
-            self._apply_text_segments_to_paragraph(paragraph, text_segments, original_formatting, leading_whitespace_runs)
+    
+    def _requires_special_handling(self, text_segments: List[Tuple[str, Dict]]) -> bool:
+        """Check if text segments require special alignment or paragraph break handling."""
+        return any(seg_formatting.get('alignment') or seg_formatting.get('paragraph_break_after') 
+                  for _, seg_formatting in text_segments)
     
     def _apply_text_segments_to_paragraph(self, paragraph: Paragraph, text_segments, original_formatting, leading_whitespace_runs):
         """Apply text segments to paragraph with sophisticated formatting preservation."""
@@ -226,14 +286,7 @@ class TextReplacer:
             
             # Apply original formatting if available
             if i < len(original_formatting):
-                base_formatting = original_formatting[i]
-                if base_formatting['font_name']:
-                    current_run.font.name = base_formatting['font_name']
-                if base_formatting['font_size']:
-                    current_run.font.size = base_formatting['font_size']
-                current_run.font.bold = base_formatting['bold']
-                current_run.font.italic = base_formatting['italic']
-                current_run.font.underline = base_formatting['underline']
+                FontFormatter.apply_font_properties(current_run, original_formatting[i])
         
         # Apply the text segments after the whitespace runs
         if text_segments:
@@ -253,14 +306,7 @@ class TextReplacer:
             # Apply original formatting as base (use formatting from after whitespace)
             base_formatting_idx = len(leading_whitespace_runs)
             if base_formatting_idx < len(original_formatting):
-                base_formatting = original_formatting[base_formatting_idx]
-                if base_formatting['font_name']:
-                    first_text_run.font.name = base_formatting['font_name']
-                if base_formatting['font_size']:
-                    first_text_run.font.size = base_formatting['font_size']
-                first_text_run.font.bold = base_formatting['bold']
-                first_text_run.font.italic = base_formatting['italic']
-                first_text_run.font.underline = base_formatting['underline']
+                FontFormatter.apply_font_properties(first_text_run, original_formatting[base_formatting_idx])
             
             # Apply segment-specific formatting
             if first_formatting:
@@ -274,14 +320,7 @@ class TextReplacer:
                     # Apply base formatting from original runs if available
                     base_idx = min(base_formatting_idx + i, len(original_formatting) - 1)
                     if base_idx < len(original_formatting):
-                        base_formatting = original_formatting[base_idx]
-                        if base_formatting['font_name']:
-                            new_run.font.name = base_formatting['font_name']
-                        if base_formatting['font_size']:
-                            new_run.font.size = base_formatting['font_size']
-                        new_run.font.bold = base_formatting['bold']
-                        new_run.font.italic = base_formatting['italic']
-                        new_run.font.underline = base_formatting['underline']
+                        FontFormatter.apply_font_properties(new_run, original_formatting[base_idx])
                     
                     # Apply segment-specific formatting
                     if segment_formatting:
@@ -299,32 +338,62 @@ class TextReplacer:
         return 'w:br' in run._element.xml and 'type="page"' in run._element.xml
     
     def _detect_page_breaks_after_text(self, paragraph, search_text: str) -> bool:
-        """Check if there's a page break after specific text in a paragraph."""
+        """Check if there's a page break after specific text in a paragraph (optimized with caching)."""
+        # Create cache key for this paragraph
+        para_id = id(paragraph)
+        
+        # First check if this paragraph has any page breaks at all (cached)
+        if para_id not in self._paragraph_has_page_breaks_cache:
+            has_any_breaks = any(self._has_page_break_in_run(run) for run in paragraph.runs)
+            self._paragraph_has_page_breaks_cache[para_id] = has_any_breaks
+        
+        # Early exit if no page breaks in entire paragraph
+        if not self._paragraph_has_page_breaks_cache[para_id]:
+            return False
+            
+        # Cache key for this specific text search
+        cache_key = (para_id, search_text)
+        if cache_key in self._page_break_cache:
+            return self._page_break_cache[cache_key]
+        
+        # Get paragraph text once
         full_text = paragraph.text
         if search_text not in full_text:
+            self._page_break_cache[cache_key] = False
             return False
         
-        # Find the position of the search text
+        # Find the position of the search text (optimized)
         search_pos = full_text.find(search_text)
         search_end = search_pos + len(search_text)
         
-        # Map character positions to runs to find which runs come after the search text
-        char_pos = 0
-        for i, run in enumerate(paragraph.runs):
-            run_start = char_pos
-            run_end = char_pos + len(run.text)
-            
-            # If the search text ends within this run or before next run
+        # Build run position map once per paragraph (cached)
+        run_positions_key = (para_id, 'run_positions')
+        if run_positions_key not in self._page_break_cache:
+            run_positions = []
+            char_pos = 0
+            for i, run in enumerate(paragraph.runs):
+                run_start = char_pos
+                run_end = char_pos + len(run.text)
+                run_positions.append((i, run_start, run_end))
+                char_pos = run_end
+            self._page_break_cache[run_positions_key] = run_positions
+        
+        run_positions = self._page_break_cache[run_positions_key]
+        
+        # Find which runs come after the search text
+        result = False
+        for i, run_start, run_end in run_positions:
             if run_start <= search_end <= run_end:
                 # Check this run and subsequent runs for page breaks
                 for j in range(i, len(paragraph.runs)):
                     if self._has_page_break_in_run(paragraph.runs[j]):
-                        return True
+                        result = True
+                        break
                 break
-            
-            char_pos = run_end
         
-        return False
+        # Cache the result
+        self._page_break_cache[cache_key] = result
+        return result
     
 
     def _is_text_in_hyperlink(self, paragraph, search_text: str) -> bool:
@@ -334,7 +403,6 @@ class TextReplacer:
         if 'hyperlink' not in paragraph._p.xml.lower():
             return False
         try:
-            import xml.etree.ElementTree as ET
             xml_str = paragraph._p.xml
             root = ET.fromstring(xml_str)
             hyperlinks = root.findall('.//w:hyperlink', {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
@@ -389,12 +457,11 @@ class TextReplacer:
                 return True
         return False
 
-    def _replace_text_in_hyperlinks(self, paragraph) -> bool:
+    def _replace_text_in_hyperlinks(self, paragraph, xml_str: str = None) -> bool:
         """Replace text within hyperlink elements while preserving XML structure (tabs, formatting, etc)."""
-        import xml.etree.ElementTree as ET
-        
         modified = False
-        xml_str = paragraph._p.xml
+        if xml_str is None:
+            xml_str = paragraph._p.xml
         
         # Create a filtered replacements list with only 'replace' operations
         replace_only_replacements = [r for r in self.replacements 
@@ -447,7 +514,6 @@ class TextReplacer:
                 # Replace paragraph XML with updated XML
                 new_xml_str = ET.tostring(root, encoding='unicode')
                 # Parse and replace the paragraph element
-                from docx.oxml import parse_xml
                 new_p_element = parse_xml(new_xml_str)
                 old_p_element = paragraph._p
                 old_p_element.getparent().replace(old_p_element, new_p_element)
@@ -464,7 +530,7 @@ class TextReplacer:
         modified = False
         
         # Apply all replacements to the full text
-        for replacement in self.replacements:
+        for i, replacement in enumerate(self.replacements):
             # Skip replacements that are cleanup actions (remove_empty_paragraphs_after)
             if 'search' not in replacement:
                 continue
@@ -472,10 +538,13 @@ class TextReplacer:
                 continue
                 
             search_text = replacement['search']
-            use_regex = bool(replacement.get('regex'))
-            ignore_case = bool(replacement.get('ignore_case'))
-            flags = re.IGNORECASE if ignore_case else 0
-            pattern = re.compile(search_text if use_regex else re.escape(search_text), flags)
+            # Use pre-compiled pattern if available, otherwise compile on-the-fly (fallback)
+            pattern = self._compiled_patterns.get(i)
+            if pattern is None:
+                use_regex = bool(replacement.get('regex'))
+                ignore_case = bool(replacement.get('ignore_case'))
+                flags = re.IGNORECASE if ignore_case else 0
+                pattern = re.compile(search_text if use_regex else re.escape(search_text), flags)
             
             # Handle insert_after operation
             if 'insert_after' in replacement:
@@ -568,8 +637,6 @@ class TextReplacer:
             text_segments = self.formatter.process_formatting_tokens(insert_text, temp_paragraph)
             
             # Create new paragraph element
-            from docx.oxml import parse_xml
-            from docx.oxml.ns import nsdecls, qn
             new_p_xml = f'<w:p {nsdecls("w")}></w:p>'
             new_p_element = parse_xml(new_p_xml)
             
@@ -580,7 +647,6 @@ class TextReplacer:
                 parent.append(new_p_element)
                 
             # Create paragraph object from the element
-            from docx.text.paragraph import Paragraph
             new_paragraph = Paragraph(new_p_element, parent)
             
             # Add runs to the new paragraph based on formatted segments, creating new paragraphs for paragraph breaks
@@ -589,18 +655,9 @@ class TextReplacer:
             # Get the most common font from the document
             original_font_formatting = {}
             try:
-                # Find the most commonly used font in the document
                 doc = paragraph._parent
-                font_counter = {}
-                for para in doc.paragraphs:
-                    for run in para.runs:
-                        if run.text.strip() and run.font.name is not None:
-                            font_name = run.font.name
-                            font_counter[font_name] = font_counter.get(font_name, 0) + 1
-                
-                # Use the most common font
-                if font_counter:
-                    most_common_font = max(font_counter, key=font_counter.get)
+                most_common_font = FontFormatter.find_most_common_font(doc)
+                if most_common_font:
                     original_font_formatting['font_name'] = most_common_font
             except:
                 pass  # If we can't determine the font, just continue without it
@@ -611,8 +668,8 @@ class TextReplacer:
                     run = current_paragraph.add_run(text)
                     
                     # Apply the most common font from the document (unless a specific font is specified)
-                    if 'font_name' in original_font_formatting and not formatting.get('font_name'):
-                        run.font.name = original_font_formatting['font_name']
+                    if original_font_formatting and not formatting.get('font_name'):
+                        FontFormatter.apply_font_properties(run, original_font_formatting)
                     
                     # Then apply any specific formatting from the replacement text
                     self.formatter.apply_formatting_to_run(run, formatting, current_paragraph)
@@ -624,8 +681,6 @@ class TextReplacer:
                     # If this segment has a paragraph break, create a new paragraph for the next segment
                     if formatting.get('paragraph_break_after') and i < len(text_segments) - 1:
                         # Create another new paragraph element
-                        from docx.oxml import parse_xml
-                        from docx.oxml.ns import nsdecls
                         new_p_xml = f'<w:p {nsdecls("w")}></w:p>'
                         next_p_element = parse_xml(new_p_xml)
                         
@@ -633,7 +688,6 @@ class TextReplacer:
                         parent.insert(parent.index(current_paragraph._element) + 1, next_p_element)
                         
                         # Update current paragraph reference
-                        from docx.text.paragraph import Paragraph
                         current_paragraph = Paragraph(next_p_element, parent)
                     
             modified = True
@@ -643,16 +697,39 @@ class TextReplacer:
 
     def replace_text_in_paragraph(self, paragraph) -> bool:
         """Replace text in a paragraph, handling splits across runs while preserving formatting."""
-        # Check if paragraph contains hyperlinks that need text replacement
-        has_hyperlinks = 'hyperlink' in paragraph._p.xml.lower()
+        # Use cached text to avoid repeated .text property calls
+        para_id = id(paragraph)
+        if para_id in self._text_cache:
+            full_text = self._text_cache[para_id]
+        else:
+            full_text = paragraph.text
+            self._text_cache[para_id] = full_text
+        
+        # Early exit if paragraph is empty
+        if not full_text.strip():
+            return False
+        
+        # Quick check: does this paragraph contain any of our search patterns?
+        has_any_matches = any(pattern in full_text for pattern in self._search_patterns_set)
+        if not has_any_matches:
+            return False
+        
+        # Check if paragraph contains hyperlinks that need text replacement (optimized)
+        if para_id in self._xml_cache:
+            paragraph_xml = self._xml_cache[para_id]
+        else:
+            paragraph_xml = paragraph._p.xml
+            self._xml_cache[para_id] = paragraph_xml
+            
+        has_hyperlinks = 'hyperlink' in paragraph_xml.lower()
         if has_hyperlinks:
             # Handle hyperlink text replacement directly in XML
-            modified = self._replace_text_in_hyperlinks(paragraph)
+            modified = self._replace_text_in_hyperlinks(paragraph, paragraph_xml)
             if modified:
+                # Clear cache since paragraph was modified
+                self._text_cache.pop(para_id, None)
+                self._xml_cache.pop(para_id, None)
                 return True
-        
-        # Get the original full text
-        full_text = paragraph.text
         
         # Check if any replacement for this paragraph is insert_after
         has_insert_after = any('insert_after' in repl for repl in self.replacements if 'search' in repl and repl['search'] in full_text)
@@ -672,6 +749,10 @@ class TextReplacer:
         
         # Use unified paragraph rebuilding with advanced formatting preservation
         self._rebuild_paragraph_with_text(paragraph, new_text, preserve_advanced_formatting=True)
+        
+        # Clear cache since paragraph was modified
+        self._text_cache.pop(para_id, None)
+        self._xml_cache.pop(para_id, None)
         
         return True
 
@@ -718,26 +799,12 @@ class TextReplacer:
                         original_run.text = whitespace_text
                         # Apply original formatting
                         if i < len(original_formatting):
-                            base_formatting = original_formatting[i]
-                            if base_formatting['font_name']:
-                                original_run.font.name = base_formatting['font_name']
-                            if base_formatting['font_size']:
-                                original_run.font.size = base_formatting['font_size']
-                            original_run.font.bold = base_formatting['bold']
-                            original_run.font.italic = base_formatting['italic']
-                            original_run.font.underline = base_formatting['underline']
+                            FontFormatter.apply_font_properties(original_run, original_formatting[i])
                     else:
                         # Create new runs for additional whitespace
                         ws_run = paragraph.add_run(whitespace_text)
                         if i < len(original_formatting):
-                            base_formatting = original_formatting[i]
-                            if base_formatting['font_name']:
-                                ws_run.font.name = base_formatting['font_name']
-                            if base_formatting['font_size']:
-                                ws_run.font.size = base_formatting['font_size']
-                            ws_run.font.bold = base_formatting['bold']
-                            ws_run.font.italic = base_formatting['italic']
-                            ws_run.font.underline = base_formatting['underline']
+                            FontFormatter.apply_font_properties(ws_run, original_formatting[i])
             else:
                 # No leading whitespace, clear the original run
                 if original_run is not None:
@@ -757,14 +824,7 @@ class TextReplacer:
                         # Apply base formatting
                         base_idx = len(leading_whitespace_runs or []) + i
                         if original_formatting and base_idx < len(original_formatting):
-                            base_formatting = original_formatting[base_idx]
-                            if base_formatting['font_name']:
-                                new_run.font.name = base_formatting['font_name']
-                            if base_formatting['font_size']:
-                                new_run.font.size = base_formatting['font_size']
-                            new_run.font.bold = base_formatting['bold']
-                            new_run.font.italic = base_formatting['italic']
-                            new_run.font.underline = base_formatting['underline']
+                            FontFormatter.apply_font_properties(new_run, original_formatting[base_idx])
                         
                         if segment_formatting:
                             self.formatter.apply_formatting_to_run(new_run, segment_formatting, paragraph)
@@ -790,11 +850,7 @@ class TextReplacer:
                         new_run = new_paragraph.add_run(text_segment)
                         # Copy base formatting if original_run exists
                         if original_run is not None:
-                            new_run.font.name = original_run.font.name
-                            new_run.font.size = original_run.font.size
-                            new_run.font.bold = original_run.font.bold
-                            new_run.font.italic = original_run.font.italic
-                            new_run.font.underline = original_run.font.underline
+                            FontFormatter.copy_font_formatting(original_run, new_run)
                         
                         if segment_formatting:
                             self.formatter.apply_formatting_to_run(new_run, segment_formatting, new_paragraph)

@@ -5,3 +5,6 @@
 .venv
 htmlcov
 .coverage
+*.docx
+*.prof
+CLAUDE.md

@@ -302,7 +302,37 @@ class DocxBulkUpdater:
                 if self.standardize_document_margins(doc):
                     modified = True
 
-            # First, remove empty paragraphs after patterns if cleanup is enabled
+            # Set table header repeat properties if enabled
+            for replacement in self.replacements:
+                if "set_table_header_repeat" in replacement:
+                    header_config = replacement["set_table_header_repeat"]
+                    if isinstance(header_config, bool) and header_config:
+                        # Use the search pattern to identify header rows
+                        header_pattern = replacement.get("search")
+                        if self.set_table_header_repeat(doc, header_pattern):
+                            modified = True
+                    elif isinstance(header_config, str):
+                        # Use the provided pattern string
+                        if self.set_table_header_repeat(doc, header_config):
+                            modified = True
+                    elif isinstance(header_config, dict):
+                        # Use pattern from dict config
+                        header_pattern = header_config.get("pattern")
+                        if self.set_table_header_repeat(doc, header_pattern):
+                            modified = True
+
+            # Change font sizes if enabled
+            for replacement in self.replacements:
+                if "change_font_size" in replacement:
+                    font_config = replacement["change_font_size"]
+                    if isinstance(font_config, dict):
+                        from_size = font_config.get("from")
+                        to_size = font_config.get("to")
+                        if from_size and to_size:
+                            if self.change_font_sizes(doc, from_size, to_size):
+                                modified = True
+
+            # Remove empty paragraphs after patterns if cleanup is enabled
             for replacement in self.replacements:
                 if "remove_empty_paragraphs_after" in replacement:
                     cleanup_value = replacement["remove_empty_paragraphs_after"]
@@ -342,51 +372,124 @@ class DocxBulkUpdater:
     
     def get_document_changes_preview(self, file_path: Path) -> Dict[str, str]:
         """Get a preview of changes by running actual operations on a temporary copy."""
-        
+
         try:
             # Create temporary copy
             with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_file:
                 temp_path = Path(temp_file.name)
-            
+
             shutil.copy2(file_path, temp_path)
-            
+
             try:
-                # Get both original and modified content in one operation
-                return self._compare_document_contents(file_path, temp_path)
-                
+                # Track formatting operations and get content changes
+                return self._compare_document_contents_with_formatting(file_path, temp_path)
+
             finally:
                 # Clean up temporary file
                 temp_path.unlink(missing_ok=True)
-                
+
         except Exception as e:
             logging.getLogger(__name__).error("Error previewing changes for %s: %s", file_path, e)
             return {}
     
-    def _compare_document_contents(self, original_path: Path, temp_path: Path) -> Dict[str, Tuple]:
-        """Compare original and modified document contents efficiently."""
-        # Get original content
+    def _compare_document_contents_with_formatting(self, original_path: Path, temp_path: Path) -> Dict[str, str]:
+        """Compare original and modified document contents and track formatting operations."""
+        # Clear cache to ensure fresh content extraction
+        self._text_cache.clear()
+
+        # Get original content and properties
         original_doc = Document(original_path)
         original_content = self._extract_all_content(original_doc, extract_xml=False)
-        
-        # Apply modifications to temporary copy
-        self.modify_docx(temp_path)
-        
+        original_properties = self._extract_document_properties(original_doc)
+
+        # Track operations performed during modification
+        operation_results = []
+
+        # Apply modifications to temporary copy while tracking operations
+        modified_doc = Document(temp_path)
+
+        # Track formatting operations
+        for replacement in self.replacements:
+            if "set_table_header_repeat" in replacement:
+                header_config = replacement["set_table_header_repeat"]
+                if isinstance(header_config, str):
+                    count = self.set_table_header_repeat(modified_doc, header_config)
+                    if count > 0:
+                        operation_results.append(f"Set {count} table header row(s) to repeat: '{header_config}'")
+
+            if "change_font_size" in replacement:
+                font_config = replacement["change_font_size"]
+                if isinstance(font_config, dict):
+                    from_size = font_config.get("from")
+                    to_size = font_config.get("to")
+                    if from_size and to_size:
+                        count = self.change_font_sizes(modified_doc, from_size, to_size)
+                        if count > 0:
+                            operation_results.append(f"Changed font size from {from_size}pt to {to_size}pt in {count} text run(s)")
+
+        # Apply standard text replacements
+        self._process_all_text_replacements(modified_doc)
+
+        # Save the modified document
+        modified_doc.save(temp_path)
+
+        # Clear cache again to avoid reusing original content for modified doc
+        self._text_cache.clear()
+
         # Get modified content
         modified_doc = Document(temp_path)
         modified_content = self._extract_all_content(modified_doc, extract_xml=False)
-        
-        # Find differences
+
+        # Find text content differences
         changes = {}
         for section_name in original_content.keys():
             if section_name in modified_content:
                 orig_lines = original_content[section_name]
                 mod_lines = modified_content[section_name]
-                
+
                 if orig_lines != mod_lines:
                     changes[section_name] = (orig_lines, mod_lines)
-        
+
+        # Add formatting operation results as a special section
+        if operation_results:
+            changes["Formatting Operations"] = ([], operation_results)
+
         return changes
-    
+
+    def _extract_document_properties(self, doc: Document) -> Dict[str, any]:
+        """Extract document properties for comparison."""
+        properties = {}
+
+        # Extract table header repeat properties
+        table_headers = []
+        for i, table in enumerate(doc.tables):
+            for j, row in enumerate(table.rows):
+                try:
+                    tr_element = row._tr
+                    from docx.oxml.ns import qn
+                    tr_pr = tr_element.find(qn('w:trPr'))
+                    if tr_pr is not None:
+                        header_elem = tr_pr.find(qn('w:tblHeader'))
+                        if header_elem is not None:
+                            row_text = ' '.join(cell.text.strip() for cell in row.cells)
+                            table_headers.append(f"Table {i+1}, Row {j+1}: {row_text}")
+                except:
+                    continue
+        properties['table_headers'] = table_headers
+
+        # Extract font sizes
+        font_sizes = {}
+        for paragraph in self._iter_all_paragraphs(doc):
+            for run in paragraph.runs:
+                if run.font.size is not None:
+                    size_pt = int(run.font.size.pt)
+                    if size_pt not in font_sizes:
+                        font_sizes[size_pt] = 0
+                    font_sizes[size_pt] += 1
+        properties['font_sizes'] = font_sizes
+
+        return properties
+
     def _extract_all_content(self, doc, extract_xml: bool = False) -> Dict[str, List[str]]:
         """Extract all content from a document organized by section.
         
@@ -466,6 +569,93 @@ class DocxBulkUpdater:
         """Extract all text content from a document organized by section."""
         return self._extract_all_content(doc, extract_xml=False)
     
+    def set_table_header_repeat(self, doc: Document, header_pattern: str = None) -> int:
+        """Set table rows to repeat as headers when spanning multiple pages.
+
+        Args:
+            doc: The Document object
+            header_pattern: Text pattern to identify header rows (if None, sets first row of each table)
+
+        Returns:
+            Number of header rows modified
+        """
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+
+        modified_count = 0
+
+        for table in doc.tables:
+            header_rows_found = []
+
+            if header_pattern:
+                # Search for rows containing the pattern
+                for i, row in enumerate(table.rows):
+                    row_text = ' '.join(cell.text.strip() for cell in row.cells)
+                    if header_pattern in row_text:
+                        header_rows_found.append(i)
+            else:
+                # Default: treat first row as header
+                if table.rows:
+                    header_rows_found.append(0)
+
+            # Set repeat header property for found rows
+            for row_idx in header_rows_found:
+                try:
+                    row = table.rows[row_idx]
+                    tr_element = row._tr
+
+                    # Check if trPr (table row properties) element exists
+                    tr_pr = tr_element.find(qn('w:trPr'))
+                    if tr_pr is None:
+                        # Create trPr element if it doesn't exist
+                        tr_pr = OxmlElement('w:trPr')
+                        tr_element.insert(0, tr_pr)
+
+                    # Check if tblHeader element exists
+                    tbl_header = tr_pr.find(qn('w:tblHeader'))
+                    if tbl_header is None:
+                        # Create and add tblHeader element
+                        tbl_header = OxmlElement('w:tblHeader')
+                        tr_pr.append(tbl_header)
+                        modified_count += 1
+                        self._logger.debug(f"Set repeat header for table row {row_idx}")
+
+                except Exception as e:
+                    self._logger.warning(f"Failed to set repeat header for row {row_idx}: {e}")
+
+        return modified_count
+
+    def change_font_sizes(self, doc: Document, from_size: int, to_size: int) -> int:
+        """Change all text with a specific font size to a new font size.
+
+        Args:
+            doc: The Document object
+            from_size: Original font size in points
+            to_size: New font size in points
+
+        Returns:
+            Number of runs modified
+        """
+        from docx.shared import Pt
+
+        modified_count = 0
+        from_size_half_points = from_size * 2  # Word stores font sizes in half-points
+        to_size_pt = Pt(to_size)
+
+        # Process all paragraphs in body, tables, headers, and footers
+        for paragraph in self._iter_all_paragraphs(doc):
+            for run in paragraph.runs:
+                # Check if run has font size property
+                if run.font.size is not None:
+                    # Convert to half-points for comparison (docx uses Emu internally)
+                    current_size_half_points = int(run.font.size.pt * 2)
+                    if current_size_half_points == from_size_half_points:
+                        run.font.size = to_size_pt
+                        modified_count += 1
+                        self._logger.debug(f"Changed font size from {from_size}pt to {to_size}pt")
+
+        return modified_count
+
     def format_diff(self, original_lines: List[str], modified_lines: List[str], section_name: str) -> str:
         """Format a unified diff for display."""
         diff = difflib.unified_diff(

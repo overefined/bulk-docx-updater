@@ -1,16 +1,19 @@
 {
   "replacements": [
     {
-      "search": "{{ ftir.TestPhase }}",
-      "replace": "{{ ftir.phase_fmtd() }}"
+      "change_font_size": {
+        "from": 5,
+        "to": 6
+      }
     },
     {
-      "search": "get_phase_name",
-      "replace": "phase_fmtd"
+      "set_table_header_repeat": "Spectrum\tTime\tPhase\tH2O\tSF6\tC2H4 (w)\tC2H4O (w)\tCO (w)\tNO (w)\tCO (d)\tNO (d)\tNO2 (d)\tNOx\tCO2 %\tVOC\tHCHO\tCH4\tC2H6\tPressure\tTemp"
     },
     {
-      "search": "{{ ftir.formatted_time() }}",
-      "replace": "{{ ftir.time_fmtd() }}"
+      "set_table_header_repeat": "Phase\tTime\tO2 %"
+    },
+    {
+      "set_table_header_repeat": "Phase\tTime\tTHC"
     }
   ]
 }

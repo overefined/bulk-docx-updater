@@ -36,13 +36,19 @@ def main():
     parser.add_argument("--margin-right", type=float, help="Right margin in inches")
     parser.add_argument("--inspect-xml", action="store_true", help="Inspect XML structure of DOCX files")
     parser.add_argument("--xml-pattern", help="Text pattern to search for in XML structure")
+    parser.add_argument("--show-xml", action="store_true", help="Display full formatted XML content")
+    parser.add_argument("--xml-search-file", type=Path, help="File containing XML search pattern")
+    parser.add_argument("--xml-replace-file", type=Path, help="File containing XML replacement pattern")
+    parser.add_argument("--xml-mode", action="store_true", help="Enable XML replacement mode for command-line replacement")
+    parser.add_argument("--set-table-headers", action="store_true", help="Set all table first rows to repeat as headers")
+    parser.add_argument("--header-pattern", help="Text pattern to identify table header rows (used with --set-table-headers)")
     
     args = parser.parse_args()
     # Logging setup
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING, format='%(levelname)s: %(message)s')
     
     # Handle XML inspection mode
-    if args.inspect_xml:
+    if args.inspect_xml or args.show_xml:
         path = Path(args.path)
         if path.is_file():
             files = [path]
@@ -62,7 +68,7 @@ def main():
         for file_path in files:
             print(f"\n{'='*80}")
             try:
-                inspect_docx_xml(str(file_path), args.xml_pattern, show_full_xml=False)
+                inspect_docx_xml(str(file_path), args.xml_pattern, show_full_xml=args.show_xml)
             except Exception as e:
                 print(f"Error inspecting {file_path}: {e}", file=sys.stderr)
         return
@@ -75,10 +81,40 @@ def main():
     # Determine replacements source
     if args.config:
         replacements = load_replacements_from_json(args.config)
+    elif args.xml_search_file and args.xml_replace_file:
+        # Handle XML file-based replacement
+        try:
+            with open(args.xml_search_file, 'r', encoding='utf-8') as f:
+                xml_search = f.read().strip()
+            with open(args.xml_replace_file, 'r', encoding='utf-8') as f:
+                xml_replace = f.read().strip()
+
+            replacements = [{
+                "search": xml_search,
+                "replace": xml_replace,
+                "xml_mode": True
+            }]
+        except Exception as e:
+            print(f"Error reading XML files: {e}", file=sys.stderr)
+            sys.exit(1)
     elif args.search and args.replace:
-        replacements = [{"search": args.search, "replace": args.replace}]
+        replacement_config = {
+            "search": args.search,
+            "replace": args.replace
+        }
+        # Add XML mode if specified
+        if args.xml_mode:
+            replacement_config["xml_mode"] = True
+
+        replacements = [replacement_config]
+    elif args.set_table_headers:
+        # Create a replacement config just for setting table headers
+        replacement_config = {
+            "set_table_header_repeat": args.header_pattern or True
+        }
+        replacements = [replacement_config]
     else:
-        print("Error: Must provide either --config file or --search/--replace pair", file=sys.stderr)
+        print("Error: Must provide either --config file, --xml-search-file/--xml-replace-file pair, --search/--replace pair, or --set-table-headers", file=sys.stderr)
         sys.exit(1)
     
     # Validate replacements

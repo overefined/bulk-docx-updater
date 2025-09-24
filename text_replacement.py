@@ -6,6 +6,7 @@ including alignment changes that require creating new paragraphs.
 """
 from __future__ import annotations
 import re
+import logging
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Optional, Tuple
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
@@ -463,36 +464,36 @@ class TextReplacer:
         modified = False
         if xml_str is None:
             xml_str = paragraph._p.xml
-        
+
         # Create a filtered replacements list with only 'replace' operations
-        replace_only_replacements = [r for r in self.replacements 
-                                   if 'search' in r and 'replace' in r and 'insert_after' not in r]
-        
+        replace_only_replacements = [r for r in self.replacements
+                                   if 'search' in r and 'replace' in r and 'insert_after' not in r and not r.get('xml_mode')]
+
         if not replace_only_replacements:
             return False
-        
+
         try:
             root = ET.fromstring(xml_str)
-            
+
             # Find hyperlink elements
             hyperlinks = root.findall('.//w:hyperlink', {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
-            
+
             for hyperlink in hyperlinks:
                 # Reconstruct text from all text elements to get full hyperlink content
                 text_elements = hyperlink.findall('.//w:t', {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
                 full_text = ''.join(elem.text or '' for elem in text_elements)
-                
+
                 # Apply replacements to the full text
                 original_replacements = self.replacements
                 self.replacements = replace_only_replacements
                 new_full_text, text_modified = self.apply_text_replacements(full_text, None)
                 self.replacements = original_replacements
-                
+
                 if text_modified:
                     # Replace text content while preserving XML structure
                     # Find which text elements need to be updated
                     old_text_parts = [elem.text or '' for elem in text_elements]
-                    
+
                     # Apply the same replacements to each text part individually
                     new_text_parts = []
                     for part in old_text_parts:
@@ -504,13 +505,13 @@ class TextReplacer:
                             new_text_parts.append(new_part)
                         else:
                             new_text_parts.append(part)
-                    
+
                     # Update the text elements with the new text parts
                     for elem, new_part in zip(text_elements, new_text_parts):
                         elem.text = new_part
-                    
+
                     modified = True
-            
+
             if modified:
                 # Replace paragraph XML with updated XML
                 new_xml_str = ET.tostring(root, encoding='unicode')
@@ -518,11 +519,84 @@ class TextReplacer:
                 new_p_element = parse_xml(new_xml_str)
                 old_p_element = paragraph._p
                 old_p_element.getparent().replace(old_p_element, new_p_element)
-                
+
         except Exception as e:
             # If XML processing fails, fall back to normal text replacement
             pass
-            
+
+        return modified
+
+    def _replace_xml_in_paragraph(self, paragraph) -> bool:
+        """Replace raw XML patterns in paragraph while preserving document structure."""
+        # Get all XML mode replacements
+        xml_replacements = [r for r in self.replacements if r.get('xml_mode')]
+
+        if not xml_replacements:
+            return False
+
+        modified = False
+        paragraph_xml = paragraph._p.xml
+
+        # Skip if paragraph XML is None or empty
+        if not paragraph_xml:
+            return False
+
+        new_xml = paragraph_xml
+
+        try:
+            for replacement in xml_replacements:
+                search_pattern = replacement.get('search')
+                replace_pattern = replacement.get('replace', '')
+
+                if not search_pattern:
+                    continue
+
+                # Handle regex vs literal search
+                if replacement.get('regex'):
+                    import re
+                    flags = re.IGNORECASE if replacement.get('ignore_case') else 0
+                    pattern = re.compile(search_pattern, flags)
+
+                    # Use re.sub for regex replacement
+                    new_xml_temp = pattern.sub(replace_pattern, new_xml)
+                else:
+                    # Simple string replacement
+                    if replacement.get('ignore_case'):
+                        # Case-insensitive string replacement
+                        import re
+                        pattern = re.compile(re.escape(search_pattern), re.IGNORECASE)
+                        new_xml_temp = pattern.sub(replace_pattern, new_xml)
+                    else:
+                        new_xml_temp = new_xml.replace(search_pattern, replace_pattern)
+
+                if new_xml_temp != new_xml:
+                    new_xml = new_xml_temp
+                    modified = True
+
+            if modified:
+                # Validate the new XML is well-formed by parsing it
+                try:
+                    # Use parse_xml from docx library to handle namespaces properly
+                    new_p_element = parse_xml(new_xml)
+                except Exception as e:
+                    # If the resulting XML is malformed, don't apply the change
+                    raise ValueError(f"XML replacement would create malformed XML: {e}")
+
+                # Replace the paragraph with the new XML
+                old_p_element = paragraph._p
+                parent = old_p_element.getparent()
+                if parent is not None:
+                    parent.replace(old_p_element, new_p_element)
+                else:
+                    # If no parent, try to update the element in place
+                    logging.getLogger(__name__).warning(f"Paragraph has no parent element, skipping XML replacement")
+                    return False
+
+        except Exception as e:
+            # Log the error but don't fail the entire operation
+            logging.getLogger(__name__).warning(f"XML replacement failed: {e}")
+            return False
+
         return modified
 
     def apply_text_replacements(self, text: str, paragraph=None) -> tuple[str, bool]:
@@ -536,6 +610,9 @@ class TextReplacer:
             if 'search' not in replacement:
                 continue
             if not ('replace' in replacement or 'insert_after' in replacement):
+                continue
+            # Skip XML mode replacements in text processing
+            if replacement.get('xml_mode'):
                 continue
                 
             search_text = replacement['search']
@@ -705,23 +782,31 @@ class TextReplacer:
         else:
             full_text = paragraph.text
             self._text_cache[para_id] = full_text
-        
+
+        # Check for XML replacements first (they take precedence)
+        xml_modified = self._replace_xml_in_paragraph(paragraph)
+        if xml_modified:
+            # Clear cache since paragraph was modified
+            self._text_cache.pop(para_id, None)
+            self._xml_cache.pop(para_id, None)
+            return True
+
         # Early exit if paragraph is empty
         if not full_text.strip():
             return False
-        
+
         # Quick check: does this paragraph contain any of our search patterns?
         has_any_matches = any(pattern in full_text for pattern in self._search_patterns_set)
         if not has_any_matches:
             return False
-        
+
         # Check if paragraph contains hyperlinks that need text replacement (optimized)
         if para_id in self._xml_cache:
             paragraph_xml = self._xml_cache[para_id]
         else:
             paragraph_xml = paragraph._p.xml
             self._xml_cache[para_id] = paragraph_xml
-            
+
         has_hyperlinks = 'hyperlink' in paragraph_xml.lower()
         if has_hyperlinks:
             # Handle hyperlink text replacement directly in XML
@@ -731,30 +816,30 @@ class TextReplacer:
                 self._text_cache.pop(para_id, None)
                 self._xml_cache.pop(para_id, None)
                 return True
-        
+
         # Check if any replacement for this paragraph is insert_after
         has_insert_after = any('insert_after' in repl for repl in self.replacements if 'search' in repl and repl['search'] in full_text)
-        
+
         if has_insert_after:
             # Handle insert_after operations without rebuilding paragraph structure
             return self._handle_insert_after_in_paragraph(paragraph, full_text)
-        
+
         # Apply text replacements using the extracted method
         new_text, modified = self.apply_text_replacements(full_text, paragraph)
-        
+
         if not modified:
             return False
-        
+
         # Now we need to rebuild the paragraph with the new text
         # but preserve formatting where possible
-        
+
         # Use unified paragraph rebuilding with advanced formatting preservation
         self._rebuild_paragraph_with_text(paragraph, new_text, preserve_advanced_formatting=True)
-        
+
         # Clear cache since paragraph was modified
         self._text_cache.pop(para_id, None)
         self._xml_cache.pop(para_id, None)
-        
+
         return True
 
     def _handle_alignment_segments(self, paragraph, new_run_data: List[Tuple[str, Dict]], 

@@ -233,32 +233,33 @@ class TextReplacer:
         original_runs = list(paragraph.runs)
         original_formatting = []
         leading_whitespace_runs = []
-        
+
         # Extract run formatting
         for run in original_runs:
             formatting = FontFormatter.extract_font_properties(run)
             original_formatting.append(formatting)
-        
+
         # Find leading whitespace runs
         for run in original_runs:
             if run.text and all(c in '\n \t' for c in run.text):
                 leading_whitespace_runs.append(run.text)
             else:
                 break
-        
+
         return {
             'original_runs': original_runs,
             'run_formats': original_formatting,
             'leading_whitespace': leading_whitespace_runs,
             'first_run': original_runs[0] if original_runs else None
         }
-    
+
+
     def _clear_paragraph_preserving_structure(self, paragraph: Paragraph):
         """Clear paragraph content while preserving the first run structure."""
         # Clear all run text
         for run in paragraph.runs:
             run.text = ''
-        
+
         # Remove all but the first run
         while len(paragraph.runs) > 1:
             last_run = paragraph.runs[-1]
@@ -273,7 +274,7 @@ class TextReplacer:
         """Apply text segments to paragraph with sophisticated formatting preservation."""
         # Get the first run to work with
         first_run = paragraph.runs[0] if paragraph.runs else paragraph.add_run()
-        
+
         # First, add back any leading whitespace runs
         current_run = first_run
         for i, whitespace_text in enumerate(leading_whitespace_runs):
@@ -283,7 +284,7 @@ class TextReplacer:
             else:
                 # Create new runs for additional whitespace
                 current_run = paragraph.add_run(whitespace_text)
-            
+
             # Apply original formatting if available
             if i < len(original_formatting):
                 FontFormatter.apply_font_properties(current_run, original_formatting[i])
@@ -302,12 +303,12 @@ class TextReplacer:
             
             first_text, first_formatting = text_segments[0]
             first_text_run.text = first_text
-            
+
             # Apply original formatting as base (use formatting from after whitespace)
             base_formatting_idx = len(leading_whitespace_runs)
             if base_formatting_idx < len(original_formatting):
                 FontFormatter.apply_font_properties(first_text_run, original_formatting[base_formatting_idx])
-            
+
             # Apply segment-specific formatting
             if first_formatting:
                 self.formatter.apply_formatting_to_run(first_text_run, first_formatting, paragraph)

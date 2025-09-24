@@ -1,8 +1,16 @@
 {
   "replacements": [
     {
-      "search": "{{ o2_qaqc.runavg }}",
-      "replace": "{{ o2_qaqc.runavg_O2 }}"
+      "search": "{{ ftir.TestPhase }}",
+      "replace": "{{ ftir.phase_fmtd() }}"
+    },
+    {
+      "search": "get_phase_name",
+      "replace": "phase_fmtd"
+    },
+    {
+      "search": "{{ ftir.formatted_time() }}",
+      "replace": "{{ ftir.time_fmtd() }}"
     }
   ]
 }

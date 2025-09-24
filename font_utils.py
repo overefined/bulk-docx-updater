@@ -34,10 +34,7 @@ class FontFormatter:
         if properties.get('font_name'):
             run.font.name = properties['font_name']
         if properties.get('font_size'):
-            if isinstance(properties['font_size'], int):
-                run.font.size = Pt(properties['font_size'])
-            else:
-                run.font.size = properties['font_size']
+            run.font.size = properties['font_size']
         if properties.get('bold') is not None:
             run.font.bold = properties['bold']
         if properties.get('italic') is not None:

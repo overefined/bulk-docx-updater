@@ -18,7 +18,7 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(description="Bulk find & replace in DOCX files")
     parser.add_argument("path", help="Directory or file path to process")
-    parser.add_argument("-c", "--config", type=Path, help="JSON config file with replacements")
+    parser.add_argument("-c", "--config", type=Path, help="JSON config file with replacements (see README)")
     parser.add_argument("-s", "--search", help="Text to search for")
     parser.add_argument("-r", "--replace", help="Text to replace with")
     parser.add_argument("--recursive", action="store_true", help="Process directories recursively")
@@ -37,9 +37,8 @@ def main():
     parser.add_argument("--inspect-xml", action="store_true", help="Inspect XML structure of DOCX files")
     parser.add_argument("--xml-pattern", help="Text pattern to search for in XML structure")
     parser.add_argument("--show-xml", action="store_true", help="Display full formatted XML content")
-    parser.add_argument("--xml-search-file", type=Path, help="File containing XML search pattern")
-    parser.add_argument("--xml-replace-file", type=Path, help="File containing XML replacement pattern")
-    parser.add_argument("--xml-mode", action="store_true", help="Enable XML replacement mode for command-line replacement")
+    parser.add_argument("--xml-search-file", type=Path, help="File containing raw WordprocessingML XML to search for (XML mode)")
+    parser.add_argument("--xml-replace-file", type=Path, help="File containing raw WordprocessingML XML to replace with (XML mode)")
     parser.add_argument("--set-table-headers", action="store_true", help="Set all table first rows to repeat as headers")
     parser.add_argument("--header-pattern", help="Text pattern to identify table header rows (used with --set-table-headers)")
     
@@ -92,7 +91,10 @@ def main():
             replacements = [{
                 "search": xml_search,
                 "replace": xml_replace,
-                "xml_mode": True
+                "xml_mode": True,
+                # Keep file references for validation clarity and UX messaging
+                "search_file": str(args.xml_search_file),
+                "replace_file": str(args.xml_replace_file)
             }]
         except Exception as e:
             print(f"Error reading XML files: {e}", file=sys.stderr)
@@ -102,9 +104,6 @@ def main():
             "search": args.search,
             "replace": args.replace
         }
-        # Add XML mode if specified
-        if args.xml_mode:
-            replacement_config["xml_mode"] = True
 
         replacements = [replacement_config]
     elif args.set_table_headers:

@@ -55,9 +55,7 @@ class TextReplacer:
                 continue
             search_text = replacement['search']
             use_regex = bool(replacement.get('regex'))
-            ignore_case = bool(replacement.get('ignore_case'))
-            flags = re.IGNORECASE if ignore_case else 0
-            pattern = re.compile(search_text if use_regex else re.escape(search_text), flags)
+            pattern = re.compile(search_text if use_regex else re.escape(search_text))
             self._compiled_patterns[i] = pattern
     
     def clear_caches(self):
@@ -551,23 +549,8 @@ class TextReplacer:
                 if not search_pattern:
                     continue
 
-                # Handle regex vs literal search
-                if replacement.get('regex'):
-                    import re
-                    flags = re.IGNORECASE if replacement.get('ignore_case') else 0
-                    pattern = re.compile(search_pattern, flags)
-
-                    # Use re.sub for regex replacement
-                    new_xml_temp = pattern.sub(replace_pattern, new_xml)
-                else:
-                    # Simple string replacement
-                    if replacement.get('ignore_case'):
-                        # Case-insensitive string replacement
-                        import re
-                        pattern = re.compile(re.escape(search_pattern), re.IGNORECASE)
-                        new_xml_temp = pattern.sub(replace_pattern, new_xml)
-                    else:
-                        new_xml_temp = new_xml.replace(search_pattern, replace_pattern)
+                # XML mode: only literal replacements are supported for safety
+                new_xml_temp = new_xml.replace(search_pattern, replace_pattern)
 
                 if new_xml_temp != new_xml:
                     new_xml = new_xml_temp
@@ -620,9 +603,7 @@ class TextReplacer:
             pattern = self._compiled_patterns.get(i)
             if pattern is None:
                 use_regex = bool(replacement.get('regex'))
-                ignore_case = bool(replacement.get('ignore_case'))
-                flags = re.IGNORECASE if ignore_case else 0
-                pattern = re.compile(search_text if use_regex else re.escape(search_text), flags)
+                pattern = re.compile(search_text if use_regex else re.escape(search_text))
             
             # Handle insert_after operation
             if 'insert_after' in replacement:

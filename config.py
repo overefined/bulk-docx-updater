@@ -28,6 +28,7 @@ def load_replacements_from_json(config_file: Path) -> List[Dict[str, str]]:
         # Process file references for large XML content
         config_dir = config_file.parent
         for replacement in replacements:
+            # Load file references and remove the file keys after loading
             replacement = _process_file_references(replacement, config_dir)
 
         return replacements
@@ -100,20 +101,22 @@ def validate_replacements(replacements: List[Dict[str, str]]) -> None:
             if xml_mode_value and not has_search_replace:
                 logging.getLogger(__name__).error("Error: 'xml_mode' in replacement %s can only be used with 'search'+'replace' keys", i)
                 sys.exit(1)
+            # Do not allow regex/ignore_case in XML mode
+            if xml_mode_value and ('regex' in repl or 'ignore_case' in repl):
+                logging.getLogger(__name__).error("Error: 'regex' and 'ignore_case' are not supported in XML mode (replacement %s)", i)
+                sys.exit(1)
 
-        # Validate regex option
+        # Validate regex option (applies to text mode only)
         if 'regex' in repl:
             regex_value = repl['regex']
             if not isinstance(regex_value, bool):
                 logging.getLogger(__name__).error("Error: 'regex' in replacement %s must be a boolean", i)
                 sys.exit(1)
-
-        # Validate ignore_case option
+        
+        # The 'ignore_case' option is no longer supported
         if 'ignore_case' in repl:
-            ignore_case_value = repl['ignore_case']
-            if not isinstance(ignore_case_value, bool):
-                logging.getLogger(__name__).error("Error: 'ignore_case' in replacement %s must be a boolean", i)
-                sys.exit(1)
+            logging.getLogger(__name__).error("Error: 'ignore_case' is not supported. Remove it from replacement %s", i)
+            sys.exit(1)
 
         # Validate remove_empty_paragraphs_after value
         if 'remove_empty_paragraphs_after' in repl:

@@ -43,7 +43,7 @@ class TestXMLReplacementConfig:
             validate_replacements(replacements)
 
     def test_valid_xml_mode_config(self):
-        """Test valid XML mode configuration."""
+        """Test valid XML mode configuration (inline XML allowed by validator)."""
         replacements = [
             {
                 "search": "<w:t>old</w:t>",
@@ -52,22 +52,20 @@ class TestXMLReplacementConfig:
             },
             {
                 "search": "normal text",
-                "replace": "new text",
-                "xml_mode": False
+                "replace": "new text"
             }
         ]
 
         # Should not raise any exceptions
         validate_replacements(replacements)
 
-    def test_regex_and_ignore_case_validation(self):
-        """Test regex and ignore_case option validation."""
+    def test_regex_validation(self):
+        """Test regex option validation."""
         replacements = [
             {
                 "search": "test",
                 "replace": "result",
-                "regex": "true",  # Should be boolean
-                "ignore_case": "false"  # Should be boolean
+                "regex": "true"  # Should be boolean
             }
         ]
 
@@ -139,64 +137,52 @@ class TestXMLReplacement:
         # Replace should have been called
         mock_parent.replace.assert_called_once()
 
-    def test_xml_replacement_regex(self):
-        """Test XML replacement with regex patterns."""
+    def test_xml_replacement_literal_attribute(self):
+        """Test XML replacement with literal attribute patterns (no regex)."""
         replacements = [
             {
-                "search": "w:val=\"[^\"]*\"",
-                "replace": "w:val=\"new_value\"",
-                "xml_mode": True,
-                "regex": True
+                "search": 'w:val="240"',
+                "replace": 'w:val="new_value"',
+                "xml_mode": True
             }
         ]
 
         replacer = TextReplacer(replacements, self.formatting_processor)
 
-        # Create mock paragraph with XML containing w:val attributes
         mock_paragraph = Mock()
         mock_p_element = Mock()
         mock_p_element.xml = '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:spacing w:val="240"/><w:sz w:val="12"/></w:p>'
         mock_paragraph._p = mock_p_element
 
-        # Mock getparent and replace methods
         mock_parent = Mock()
         mock_p_element.getparent.return_value = mock_parent
         mock_parent.replace = Mock()
 
-        # Test XML replacement
         result = replacer._replace_xml_in_paragraph(mock_paragraph)
-
-        # Should have been modified
         assert result is True
 
-    def test_xml_replacement_case_insensitive(self):
-        """Test XML replacement with case-insensitive matching."""
+    def test_xml_replacement_literal_case_sensitive(self):
+        """Test XML replacement with exact literal casing (no ignore_case)."""
         replacements = [
             {
-                "search": "<W:T>test</W:T>",
+                "search": "<w:t>test</w:t>",
                 "replace": "<w:t>replaced</w:t>",
-                "xml_mode": True,
-                "ignore_case": True
+                "xml_mode": True
             }
         ]
 
         replacer = TextReplacer(replacements, self.formatting_processor)
 
-        # Create mock paragraph
         mock_paragraph = Mock()
         mock_p_element = Mock()
         mock_p_element.xml = '<w:p xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:r><w:t>test</w:t></w:r></w:p>'
         mock_paragraph._p = mock_p_element
 
-        # Mock getparent and replace methods
         mock_parent = Mock()
         mock_p_element.getparent.return_value = mock_parent
         mock_parent.replace = Mock()
 
-        # Test XML replacement
         result = replacer._replace_xml_in_paragraph(mock_paragraph)
-
-        # Should have been modified
         assert result is True
 
     def test_xml_replacement_malformed_handling(self):

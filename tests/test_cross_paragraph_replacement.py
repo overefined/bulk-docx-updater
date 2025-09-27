@@ -206,12 +206,12 @@ class TestCrossParagraphReplacement:
         # Check that a run exists (formatting was processed)
         assert len(paragraphs[0].runs) > 0
     
-    def test_insert_after_cross_paragraph(self):
-        """Test that insert_after operations work with cross-paragraph patterns."""
+    def test_append_after_cross_paragraph(self):
+        """Test that appending via replace works with cross-paragraph patterns."""
         replacements = [
             {
                 "search": "Pattern Text",
-                "insert_after": "Inserted Content"
+                "replace": "Pattern TextInserted Content"
             }
         ]
         
@@ -222,7 +222,7 @@ class TestCrossParagraphReplacement:
         
         # Cross-paragraph replacement should handle this
         result = replacer.replace_text_across_paragraphs(paragraphs)
-        assert result is True  # insert_after is supported in cross-paragraph mode
+        assert result is True
         # Should contain both original pattern and inserted content
         combined_text = paragraphs[0].text
         assert "Pattern Text" in combined_text

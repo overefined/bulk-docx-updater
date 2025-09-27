@@ -2,7 +2,7 @@
 Unit tests for empty paragraph cleanup functionality.
 
 Tests the remove_empty_paragraphs_after_pattern method and its integration
-with insert_after operations in the DocxBulkUpdater class.
+with standard replace operations in the DocxBulkUpdater class.
 """
 import pytest
 from pathlib import Path
@@ -17,7 +17,7 @@ class TestEmptyParagraphCleanup:
     def setup_method(self):
         """Set up test fixtures."""
         self.replacements = [
-            {"search": "SITE PHOTOS", "insert_after": "New content", "remove_empty_paragraphs_after": True},
+            {"search": "SITE PHOTOS", "replace": "SITE PHOTOSNew content", "remove_empty_paragraphs_after": True},
             {"remove_empty_paragraphs_after": "{{ technician_resume }}"}
         ]
         self.updater = DocxBulkUpdater(self.replacements)
@@ -151,7 +151,7 @@ class TestCleanupIntegration:
         self.replacements = [
             {
                 "search": "SITE PHOTOS",
-                "insert_after": "pagebreak{format:center,size12}Inserted content{/format}",
+                "replace": "SITE PHOTOSpagebreak{format:center,size12}Inserted content{/format}",
                 "remove_empty_paragraphs_after": True
             },
             {
@@ -165,7 +165,7 @@ class TestCleanupIntegration:
         replacements = [
             {
                 "search": "SITE PHOTOS",
-                "insert_after": "New content",
+                "replace": "SITE PHOTOSNew content",
                 "remove_empty_paragraphs_after": True
             }
         ]

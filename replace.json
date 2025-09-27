@@ -1,19 +1,8 @@
 {
-  "replacements": [
-    {
-      "change_font_size": {
-        "from": 5,
-        "to": 6
-      }
-    },
-    {
-      "set_table_header_repeat": "Spectrum\tTime\tPhase\tH2O\tSF6\tC2H4 (w)\tC2H4O (w)\tCO (w)\tNO (w)\tCO (d)\tNO (d)\tNO2 (d)\tNOx\tCO2 %\tVOC\tHCHO\tCH4\tC2H6\tPressure\tTemp"
-    },
-    {
-      "set_table_header_repeat": "Phase\tTime\tO2 %"
-    },
-    {
-      "set_table_header_repeat": "Phase\tTime\tTHC"
-    }
+  "operations": [
+    { "op": "font_size", "from": 5, "to": 6 },
+    { "op": "table_header_repeat", "pattern": "Spectrum\tTime\tPhase\tH2O\tSF6\tC2H4 (w)\tC2H4O (w)\tCO (w)\tNO (w)\tCO (d)\tNO (d)\tNO2 (d)\tNOx\tCO2 %\tVOC\tHCHO\tCH4\tC2H6\tPressure\tTemp", "enabled": true },
+    { "op": "table_header_repeat", "pattern": "Phase\tTime\tO2 %", "enabled": true },
+    { "op": "table_header_repeat", "pattern": "Phase\tTime\tTHC", "enabled": true }
   ]
 }

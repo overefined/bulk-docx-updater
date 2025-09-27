@@ -101,7 +101,7 @@ class DocxBulkUpdater:
         for replacement in self.replacements:
             if 'search' not in replacement:
                 continue
-            if not ('replace' in replacement or 'insert_after' in replacement):
+            if 'replace' not in replacement:
                 continue
             patterns.append(replacement['search'])
         return patterns
@@ -302,23 +302,24 @@ class DocxBulkUpdater:
                 if self.standardize_document_margins(doc):
                     modified = True
 
-            # Set table header repeat properties if enabled
+            # Set or unset table header repeat as configured
             for replacement in self.replacements:
                 if "set_table_header_repeat" in replacement:
                     header_config = replacement["set_table_header_repeat"]
                     if isinstance(header_config, bool) and header_config:
                         # Use the search pattern to identify header rows
                         header_pattern = replacement.get("search")
-                        if self.set_table_header_repeat(doc, header_pattern):
+                        if self.set_table_header_repeat(doc, header_pattern, enable=True):
                             modified = True
                     elif isinstance(header_config, str):
                         # Use the provided pattern string
-                        if self.set_table_header_repeat(doc, header_config):
+                        if self.set_table_header_repeat(doc, header_config, enable=True):
                             modified = True
                     elif isinstance(header_config, dict):
                         # Use pattern from dict config
                         header_pattern = header_config.get("pattern")
-                        if self.set_table_header_repeat(doc, header_pattern):
+                        enable = True if header_config.get("enabled", True) else False
+                        if self.set_table_header_repeat(doc, header_pattern, enable=enable):
                             modified = True
 
             # Change font sizes if enabled
@@ -348,10 +349,7 @@ class DocxBulkUpdater:
                             modified = True
 
             # Then do the text replacements and inserts
-            has_search_ops = any(
-                ("search" in r) and ("replace" in r or "insert_after" in r)
-                for r in self.replacements
-            )
+            has_search_ops = any(("search" in r) and ("replace" in r) for r in self.replacements)
 
             if has_search_ops:
                 # Process both cross-paragraph and single-paragraph replacements efficiently
@@ -413,9 +411,17 @@ class DocxBulkUpdater:
             if "set_table_header_repeat" in replacement:
                 header_config = replacement["set_table_header_repeat"]
                 if isinstance(header_config, str):
-                    count = self.set_table_header_repeat(modified_doc, header_config)
+                    count = self.set_table_header_repeat(modified_doc, header_config, enable=True)
                     if count > 0:
                         operation_results.append(f"Set {count} table header row(s) to repeat: '{header_config}'")
+                elif isinstance(header_config, dict):
+                    pat = header_config.get("pattern")
+                    enable = True if header_config.get("enabled", True) else False
+                    count = self.set_table_header_repeat(modified_doc, pat, enable=enable)
+                    if count > 0:
+                        action = "Set" if enable else "Unset"
+                        pattxt = f" '{pat}'" if pat else " (first row)"
+                        operation_results.append(f"{action} table header repeat on {count} row(s){pattxt}")
 
             if "change_font_size" in replacement:
                 font_config = replacement["change_font_size"]
@@ -569,15 +575,16 @@ class DocxBulkUpdater:
         """Extract all text content from a document organized by section."""
         return self._extract_all_content(doc, extract_xml=False)
     
-    def set_table_header_repeat(self, doc: Document, header_pattern: str = None) -> int:
-        """Set table rows to repeat as headers when spanning multiple pages.
+    def set_table_header_repeat(self, doc: Document, header_pattern: str = None, enable: bool = True) -> int:
+        """Enable or disable table header repeat on rows matching a pattern.
 
         Args:
-            doc: The Document object
-            header_pattern: Text pattern to identify header rows (if None, sets first row of each table)
+            doc: Document object
+            header_pattern: Text pattern to identify header rows. If None, target first row of each table.
+            enable: True to set w:tblHeader, False to remove it.
 
         Returns:
-            Number of header rows modified
+            Number of rows modified
         """
         from docx.oxml import OxmlElement
         from docx.oxml.ns import qn
@@ -598,7 +605,7 @@ class DocxBulkUpdater:
                 if table.rows:
                     header_rows_found.append(0)
 
-            # Set repeat header property for found rows
+            # Apply or remove repeat header property for found rows
             for row_idx in header_rows_found:
                 try:
                     row = table.rows[row_idx]
@@ -613,12 +620,18 @@ class DocxBulkUpdater:
 
                     # Check if tblHeader element exists
                     tbl_header = tr_pr.find(qn('w:tblHeader'))
-                    if tbl_header is None:
-                        # Create and add tblHeader element
-                        tbl_header = OxmlElement('w:tblHeader')
-                        tr_pr.append(tbl_header)
-                        modified_count += 1
-                        self._logger.debug(f"Set repeat header for table row {row_idx}")
+                    if enable:
+                        if tbl_header is None:
+                            # Create and add tblHeader element
+                            tbl_header = OxmlElement('w:tblHeader')
+                            tr_pr.append(tbl_header)
+                            modified_count += 1
+                            self._logger.debug(f"Set repeat header for table row {row_idx}")
+                    else:
+                        if tbl_header is not None:
+                            tr_pr.remove(tbl_header)
+                            modified_count += 1
+                            self._logger.debug(f"Removed repeat header for table row {row_idx}")
 
                 except Exception as e:
                     self._logger.warning(f"Failed to set repeat header for row {row_idx}: {e}")

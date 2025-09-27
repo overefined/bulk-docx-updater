@@ -8,22 +8,21 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Any
 import logging
 
 
-def load_replacements_from_json(config_file: Path) -> List[Dict[str, str]]:
+def load_replacements_from_json(config_file: Path) -> List[Dict[str, Any]]:
     """Load replacements from a JSON configuration file."""
     try:
         with open(config_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        if isinstance(data, list):
-            replacements = data
-        elif isinstance(data, dict) and 'replacements' in data:
-            replacements = data['replacements']
-        else:
-            raise ValueError("JSON must be a list of replacements or contain a 'replacements' key")
+        # Only support the new 'operations' schema
+        if not (isinstance(data, dict) and isinstance(data.get('operations'), list)):
+            raise ValueError("JSON must contain an 'operations' list")
+
+        replacements: List[Dict[str, Any]] = _operations_to_replacements(data['operations'])
 
         # Process file references for large XML content
         config_dir = config_file.parent
@@ -36,6 +35,73 @@ def load_replacements_from_json(config_file: Path) -> List[Dict[str, str]]:
     except Exception as e:
         logging.getLogger(__name__).error("Error loading config file %s: %s", config_file, e)
         sys.exit(1)
+
+
+def _operations_to_replacements(operations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Translate new-style operations into the existing replacements model.
+
+    Supported operations:
+      - { op: 'replace', search, replace, regex? }
+      - { op: 'cleanup_empty_after', pattern }
+      - { op: 'table_header_repeat', pattern?, enabled? }
+      - { op: 'font_size', from, to }
+      - { op: 'xml_replace', search_file|search, replace_file|replace }
+    """
+    out: List[Dict[str, Any]] = []
+    for i, op in enumerate(operations):
+        if not isinstance(op, dict) or 'op' not in op:
+            logging.getLogger(__name__).error("Invalid operation at index %s: expected object with 'op'", i)
+            sys.exit(1)
+
+        kind = op.get('op')
+        if kind == 'replace':
+            search = op.get('search')
+            replace = op.get('replace')
+            if search is None or replace is None:
+                logging.getLogger(__name__).error("Operation %s: 'replace' requires 'search' and 'replace'", i)
+                sys.exit(1)
+            item: Dict[str, Any] = {'search': search, 'replace': replace}
+            if 'regex' in op:
+                item['regex'] = bool(op['regex'])
+            out.append(item)
+        elif kind == 'cleanup_empty_after':
+            pattern = op.get('pattern')
+            if not pattern:
+                logging.getLogger(__name__).error("Operation %s: 'cleanup_empty_after' requires 'pattern'", i)
+                sys.exit(1)
+            out.append({'remove_empty_paragraphs_after': pattern})
+        elif kind == 'table_header_repeat':
+            enabled = op.get('enabled', True)
+            pattern = op.get('pattern')
+            # Represent using existing key with dict payload
+            payload: Dict[str, Any] = {'enabled': bool(enabled)}
+            if pattern is not None:
+                payload['pattern'] = pattern
+            out.append({'set_table_header_repeat': payload})
+        elif kind == 'font_size':
+            from_size = op.get('from')
+            to_size = op.get('to')
+            if from_size is None or to_size is None:
+                logging.getLogger(__name__).error("Operation %s: 'font_size' requires 'from' and 'to'", i)
+                sys.exit(1)
+            out.append({'change_font_size': {'from': from_size, 'to': to_size}})
+        elif kind == 'xml_replace':
+            # Support both file-based and inline xml
+            repl: Dict[str, Any] = {'xml_mode': True}
+            if 'search_file' in op:
+                repl['search_file'] = op['search_file']
+            if 'replace_file' in op:
+                repl['replace_file'] = op['replace_file']
+            if 'search' in op:
+                repl['search'] = op['search']
+            if 'replace' in op:
+                repl['replace'] = op['replace']
+            out.append(repl)
+        else:
+            logging.getLogger(__name__).error("Unsupported operation kind '%s'", kind)
+            sys.exit(1)
+
+    return out
 
 
 def _process_file_references(replacement: Dict, config_dir: Path) -> Dict:
@@ -66,29 +132,25 @@ def _process_file_references(replacement: Dict, config_dir: Path) -> Dict:
     return replacement
 
 
-def validate_replacements(replacements: List[Dict[str, str]]) -> None:
+def validate_replacements(replacements: List[Dict[str, Any]]) -> None:
     """Validate replacement configuration structure."""
     for i, repl in enumerate(replacements):
         if not isinstance(repl, dict):
             logging.getLogger(__name__).error("Error: Replacement %s must be a dictionary", i)
             sys.exit(1)
 
-        # Must have either search/replace pair OR search/insert_after pair OR standalone remove_empty_paragraphs_after OR set_table_header_repeat
+        # Must have either search/replace pair OR standalone remove_empty_paragraphs_after OR set_table_header_repeat
         # Also support file-based references before content is loaded
         has_search_replace = ('search' in repl and 'replace' in repl) or ('search_file' in repl and 'replace_file' in repl) or ('search_file' in repl and 'replace' in repl) or ('search' in repl and 'replace_file' in repl)
-        has_search_insert_after = ('search' in repl and 'insert_after' in repl) or ('search_file' in repl and 'insert_after' in repl)
         has_standalone_cleanup_action = 'remove_empty_paragraphs_after' in repl and 'search' not in repl and 'search_file' not in repl
         has_table_header_repeat = 'set_table_header_repeat' in repl
         has_font_size_change = 'change_font_size' in repl
 
-        if not (has_search_replace or has_search_insert_after or has_standalone_cleanup_action or has_table_header_repeat or has_font_size_change):
-            logging.getLogger(__name__).error("Error: Replacement %s must have either 'search'+'replace' keys, 'search_file'+'replace_file' keys, 'search'+'insert_after' keys, standalone 'remove_empty_paragraphs_after' key, 'set_table_header_repeat' key, or 'change_font_size' key", i)
+        if not (has_search_replace or has_standalone_cleanup_action or has_table_header_repeat or has_font_size_change):
+            logging.getLogger(__name__).error("Error: Replacement %s must have either 'search'+'replace' keys, 'search_file'+'replace_file' keys, standalone 'remove_empty_paragraphs_after' key, 'set_table_header_repeat' key, or 'change_font_size' key", i)
             sys.exit(1)
 
-        # Cannot have both replace and insert_after
-        if 'replace' in repl and 'insert_after' in repl:
-            logging.getLogger(__name__).error("Error: Replacement %s cannot have both 'replace' and 'insert_after' keys", i)
-            sys.exit(1)
+        # No special-case checks for unsupported keys
 
         # Validate XML mode options
         if 'xml_mode' in repl:
@@ -130,7 +192,17 @@ def validate_replacements(replacements: List[Dict[str, str]]) -> None:
                 if not isinstance(cleanup_value, bool) or cleanup_value is not True:
                     logging.getLogger(__name__).error("Error: 'remove_empty_paragraphs_after' in replacement %s with search/replace must be boolean true", i)
                     sys.exit(1)
-        
+        # Validate set_table_header_repeat payloads
+        if 'set_table_header_repeat' in repl:
+            payload = repl['set_table_header_repeat']
+            if isinstance(payload, dict):
+                if 'enabled' in payload and not isinstance(payload['enabled'], bool):
+                    logging.getLogger(__name__).error("Error: 'enabled' in set_table_header_repeat must be boolean")
+                    sys.exit(1)
+                if 'pattern' in payload and not isinstance(payload['pattern'], str):
+                    logging.getLogger(__name__).error("Error: 'pattern' in set_table_header_repeat must be string")
+                    sys.exit(1)
+
 
 
 def parse_margin_settings(args) -> Dict[str, float]:

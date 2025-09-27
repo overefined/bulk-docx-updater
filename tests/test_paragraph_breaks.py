@@ -27,12 +27,14 @@ class TestParagraphBreakEndToEnd:
     def test_paragraphbreak_config_loading_and_validation(self):
         """Test that paragraph break configurations load and validate correctly."""
         config_data = {
-            "replacements": [
+            "operations": [
                 {
+                    "op": "replace",
                     "search": "SITE PHOTOS",
-                    "insert_after": "pagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"
+                    "replace": "SITE PHOTOSpagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"
                 },
                 {
+                    "op": "replace",
                     "search": "TEST RESULTS",
                     "replace": "Result1paragraphbreakResult2paragraphbreakResult3"
                 }
@@ -50,7 +52,7 @@ class TestParagraphBreakEndToEnd:
         
         assert len(replacements) == 2
         assert replacements[0]["search"] == "SITE PHOTOS"
-        assert "paragraphbreak" in replacements[0]["insert_after"]
+        assert "paragraphbreak" in replacements[0]["replace"]
         assert replacements[1]["search"] == "TEST RESULTS"
         assert "paragraphbreak" in replacements[1]["replace"]
     
@@ -59,7 +61,7 @@ class TestParagraphBreakEndToEnd:
         replacements = [
             {
                 "search": "PHOTOS",
-                "insert_after": "Photo1paragraphbreakPhoto2"
+                "replace": "Photo1paragraphbreakPhoto2"
             }
         ]
         
@@ -140,7 +142,7 @@ class TestParagraphBreakEndToEnd:
         replacements = [
             {
                 "search": "PHOTOS",
-                "insert_after": "{format:center,bold,size14}Photo1paragraphbreakPhoto2{/format}paragraphbreakPhoto3"
+                "replace": "{format:center,bold,size14}Photo1paragraphbreakPhoto2{/format}paragraphbreakPhoto3"
             }
         ]
         
@@ -205,7 +207,7 @@ class TestParagraphBreakEndToEnd:
         replacements = [
             {
                 "search": "SITE PHOTOS",
-                "insert_after": "pagebreak{format:center,size12}{% if ecom_photos != none %}{% for site_photo in ecom_photos.site_photos %}{{ site_photo }}paragraphbreak{% endfor %}{% endif %}{/format}"
+                "replace": "pagebreak{format:center,size12}{% if ecom_photos != none %}{% for site_photo in ecom_photos.site_photos %}{{ site_photo }}paragraphbreak{% endfor %}{% endif %}{/format}"
             }
         ]
         

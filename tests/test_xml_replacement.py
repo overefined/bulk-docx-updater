@@ -33,9 +33,7 @@ class TestXMLReplacementConfig:
         """Test that xml_mode can only be used with search/replace operations."""
         replacements = [
             {
-                "search": "test",
-                "insert_after": "content",
-                "xml_mode": True  # Should fail - only works with replace
+                "xml_mode": True  # Should fail - requires search and replace
             }
         ]
 
@@ -371,13 +369,14 @@ class TestXMLFileReferences:
             # Create config file
             config_file = temp_dir / "config.json"
             config_data = {
-                "replacements": [
+                "operations": [
                     {
+                        "op": "xml_replace",
                         "search_file": "search_pattern.xml",
-                        "replace_file": "replace_pattern.xml",
-                        "xml_mode": True
+                        "replace_file": "replace_pattern.xml"
                     },
                     {
+                        "op": "replace",
                         "search": "regular text",
                         "replace": "replacement text"
                     }

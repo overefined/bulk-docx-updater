@@ -72,9 +72,9 @@ class TestTextReplacementFunctionality:
         assert modified is True
         assert result == "SITE Photo1paragraphbreakPhoto2 section"
     
-    def test_apply_text_replacements_insert_after(self):
-        """Test insert_after operation."""
-        replacements = [{"search": "PHOTOS", "insert_after": "Photo1paragraphbreakPhoto2"}]
+    def test_apply_text_replacements_append_after(self):
+        """Test appending content using replace."""
+        replacements = [{"search": "PHOTOS", "replace": "PHOTOS\nPhoto1paragraphbreakPhoto2"}]
         replacer = TextReplacer(replacements, self.formatter)
         
         result, modified = replacer.apply_text_replacements("SITE PHOTOS section")
@@ -211,11 +211,11 @@ class TestTextReplacementWithDocx:
         self.doc = Document()
         self.paragraph = self.doc.add_paragraph("Original text content")
     
-    def test_handle_insert_after_with_paragraphbreaks(self):
-        """Test insert_after operation with paragraph breaks using string processing."""
+    def test_append_after_with_paragraphbreaks(self):
+        """Test append-after via replace with paragraph breaks using string processing."""
         # Set up replacements with paragraph breaks
         replacements = [
-            {"search": "PHOTOS", "insert_after": "Photo1paragraphbreakPhoto2paragraphbreakPhoto3"}
+            {"search": "PHOTOS", "replace": "PHOTOSPhoto1paragraphbreakPhoto2paragraphbreakPhoto3"}
         ]
         replacer = TextReplacer(replacements, self.formatter)
         
@@ -233,9 +233,9 @@ class TestTextReplacementWithDocx:
         assert "Photo2" in result
         assert "Photo3" in result
     
-    def test_handle_insert_after_no_match(self):
-        """Test insert_after with no matching text."""
-        replacements = [{"search": "MISSING", "insert_after": "new content"}]
+    def test_append_after_no_match(self):
+        """Test append-after via replace with no matching text."""
+        replacements = [{"search": "MISSING", "replace": "MISSINGnew content"}]
         replacer = TextReplacer(replacements, self.formatter)
         
         result, modified = replacer.apply_text_replacements("SITE PHOTOS content")
@@ -261,15 +261,15 @@ class TestTextReplacementWithDocx:
         paragraph._p.append(hyperlink)
         return paragraph
     
-    def test_handle_insert_after_skips_hyperlinked_text(self):
-        """Test insert_after skips hyperlinked content."""
-        replacements = [{"search": "PHOTOS", "insert_after": "new content"}]
+    def test_hyperlink_detection_helper(self):
+        """Test hyperlink detection helper returns True when match is in hyperlink."""
+        replacements = [{"search": "PHOTOS", "replace": "PHOTOS new content"}]
         replacer = TextReplacer(replacements, self.formatter)
         
         # Create paragraph with hyperlink using our helper
         paragraph = self.create_paragraph_with_hyperlink("APPENDIX H    SITE PHOTOS")
         
-        # Test that hyperlink detection correctly identifies hyperlinked text (should skip insert_after)
+        # Test that hyperlink detection correctly identifies hyperlinked text
         is_hyperlinked = replacer._is_text_in_hyperlink(paragraph, "PHOTOS")
         assert is_hyperlinked is True
 

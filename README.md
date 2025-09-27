@@ -36,50 +36,37 @@ python main.py /path/to/docs --config replace.json --dry-run
 
 - Basic text replace (JSON config):
   ```json
-  {
-    "replacements": [
-      { "search": "Old", "replace": "New" }
-    ]
-  }
+  { "operations": [ { "op": "replace", "search": "Old", "replace": "New" } ] }
   ```
 
 - Insert content after a match:
   ```json
-  {
-    "replacements": [
-      { "search": "SECTION HEADER", "insert_after": "pagebreak{format:center}More{/format}" }
-    ]
-  }
+  { "operations": [ { "op": "replace", "search": "SECTION HEADER", "replace": "SECTION HEADERpagebreak{format:center}More{/format}" } ] }
   ```
 
 - Clean up the next paragraph after a match:
   ```json
-  {
-    "replacements": [
-      { "search": "PATTERN", "replace": "NEW", "remove_empty_paragraphs_after": true }
-    ]
-  }
+  { "operations": [
+    { "op": "replace", "search": "PATTERN", "replace": "NEW" },
+    { "op": "cleanup_empty_after", "pattern": "{{ technician_resume }}" }
+  ] }
   ```
 
 - Repeat table headers:
-  - JSON (all tables):
+  - Enable by pattern:
     ```json
-    { "replacements": [ { "set_table_header_repeat": true } ] }
+    { "operations": [ { "op": "table_header_repeat", "pattern": "Spectrum    Time", "enabled": true } ] }
     ```
-  - JSON (specific header pattern):
+  - Disable by header text:
     ```json
-    { "replacements": [ { "set_table_header_repeat": "Spectrum    Time" } ] }
+    { "operations": [ { "op": "table_header_repeat", "pattern": "Phase\tTime\tO2 %", "enabled": false } ] }
     ```
   - CLI (all tables): `python main.py <path> --set-table-headers`
   - CLI (specific header pattern): `python main.py <path> --set-table-headers --header-pattern "Spectrum    Time"`
 
 - Change font sizes across a document:
   ```json
-  {
-    "replacements": [
-      { "change_font_size": { "from": 8, "to": 10 } }
-    ]
-  }
+  { "operations": [ { "op": "font_size", "from": 8, "to": 10 } ] }
   ```
 
 ## XML Mode
@@ -95,8 +82,8 @@ python main.py /path/to/docs \
 JSON config:
 ```json
 {
-  "replacements": [
-    { "xml_mode": true, "search_file": "patterns/search.xml", "replace_file": "patterns/replace.xml" }
+  "operations": [
+    { "op": "xml_replace", "search_file": "patterns/search.xml", "replace_file": "patterns/replace.xml" }
   ]
 }
 ```
@@ -122,11 +109,7 @@ Example:
 Use Python-style regex for text replacements.
 
 ```json
-{
-  "replacements": [
-    { "search": "ACME\\s+Corp(oration)?", "replace": "TechCorp", "regex": true }
-  ]
-}
+{ "operations": [ { "op": "replace", "search": "ACME\\s+Corp(oration)?", "replace": "TechCorp", "regex": true } ] }
 ```
 
 ## Useful Flags

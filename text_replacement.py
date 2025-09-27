@@ -43,7 +43,7 @@ class TextReplacer:
         """Extract all search patterns for quick lookup."""
         patterns = []
         for replacement in self.replacements:
-            if 'search' in replacement and ('replace' in replacement or 'insert_after' in replacement):
+            if 'search' in replacement and 'replace' in replacement:
                 patterns.append(replacement['search'])
         return patterns
         self._paragraph_has_page_breaks_cache = {}
@@ -94,8 +94,7 @@ class TextReplacer:
     
     def _is_valid_replacement(self, replacement: Dict) -> bool:
         """Check if replacement is valid for processing."""
-        return ('search' in replacement and 
-                ('replace' in replacement or 'insert_after' in replacement))
+        return ('search' in replacement and 'replace' in replacement)
     
     def _pattern_spans_paragraphs(self, paragraphs: List[Paragraph], search_text: str) -> bool:
         """Check if pattern spans across multiple paragraphs."""
@@ -465,7 +464,7 @@ class TextReplacer:
 
         # Create a filtered replacements list with only 'replace' operations
         replace_only_replacements = [r for r in self.replacements
-                                   if 'search' in r and 'replace' in r and 'insert_after' not in r and not r.get('xml_mode')]
+                                   if 'search' in r and 'replace' in r and not r.get('xml_mode')]
 
         if not replace_only_replacements:
             return False
@@ -592,7 +591,7 @@ class TextReplacer:
             # Skip replacements that are cleanup actions (remove_empty_paragraphs_after)
             if 'search' not in replacement:
                 continue
-            if not ('replace' in replacement or 'insert_after' in replacement):
+            if 'replace' not in replacement:
                 continue
             # Skip XML mode replacements in text processing
             if replacement.get('xml_mode'):
@@ -604,25 +603,6 @@ class TextReplacer:
             if pattern is None:
                 use_regex = bool(replacement.get('regex'))
                 pattern = re.compile(search_text if use_regex else re.escape(search_text))
-            
-            # Handle insert_after operation
-            if 'insert_after' in replacement:
-                insert_text = replacement['insert_after']
-                
-                # Find all matches and choose the first one that's not in a hyperlink
-                matches = list(pattern.finditer(new_text))
-                for match in matches:
-                    start, end = match.start(), match.end()
-                    # Check if this match is in a hyperlink (if paragraph available)
-                    if paragraph and self._match_overlaps_hyperlink(paragraph, search_text, start, end):
-                        continue  # Skip this match, try the next one
-                    
-                    # Process this match - add line break before inserted content for proper separation
-                    new_text = new_text[:end] + '\n' + insert_text + new_text[end:]
-                    modified = True
-                    break  # Only process the first non-appendix-list match
-                    
-                continue
             
             # Handle regular replace operation
             replace_text = replacement['replace']
@@ -656,103 +636,6 @@ class TextReplacer:
                 
         return new_text, modified
 
-    def _handle_insert_after_in_paragraph(self, paragraph, full_text: str) -> bool:
-        """Handle insert_after operations while preserving existing paragraph structure."""
-        modified = False
-        
-        # Process each insert_after replacement
-        for replacement in self.replacements:
-            if 'search' not in replacement or 'insert_after' not in replacement:
-                continue
-                
-            search_text = replacement['search']
-            insert_text = replacement['insert_after']
-            
-            if search_text not in full_text:
-                continue
-                
-            # Find first non-hyperlink match for insert_after operation
-            matches = list(re.finditer(re.escape(search_text), full_text))
-            if not matches:
-                continue
-            
-            # Find the first match that's not in a hyperlink
-            target_match = None
-            for match in matches:
-                start, end = match.start(), match.end()
-                if not self._is_text_in_hyperlink(paragraph, search_text):
-                    target_match = match
-                    break
-            
-            if target_match is None:
-                continue  # All matches were in hyperlinks
-                
-            # Create a new paragraph after the current one for the inserted content
-            parent = paragraph._element.getparent()
-            next_paragraph = paragraph._element.getnext()
-            
-            # Process formatting tokens in the insert text
-            temp_paragraph = paragraph  # Use current paragraph for context
-            text_segments = self.formatter.process_formatting_tokens(insert_text, temp_paragraph)
-            
-            # Create new paragraph element
-            new_p_xml = f'<w:p {nsdecls("w")}></w:p>'
-            new_p_element = parse_xml(new_p_xml)
-            
-            # Insert the new paragraph after current paragraph
-            if next_paragraph is not None:
-                parent.insert(parent.index(paragraph._element) + 1, new_p_element)
-            else:
-                parent.append(new_p_element)
-                
-            # Create paragraph object from the element
-            new_paragraph = Paragraph(new_p_element, parent)
-            
-            # Add runs to the new paragraph based on formatted segments, creating new paragraphs for paragraph breaks
-            current_paragraph = new_paragraph
-            
-            # Get the most common font from the document
-            original_font_formatting = {}
-            try:
-                doc = paragraph._parent
-                most_common_font = FontFormatter.find_most_common_font(doc)
-                if most_common_font:
-                    original_font_formatting['font_name'] = most_common_font
-            except:
-                pass  # If we can't determine the font, just continue without it
-            
-            for i, (text, formatting) in enumerate(text_segments):
-                if text or formatting.get('page_break_after') or formatting.get('line_break_after') or formatting.get('paragraph_break_after'):
-                    # Create run with text
-                    run = current_paragraph.add_run(text)
-                    
-                    # Apply the most common font from the document (unless a specific font is specified)
-                    if original_font_formatting and not formatting.get('font_name'):
-                        FontFormatter.apply_font_properties(run, original_font_formatting)
-                    
-                    # Then apply any specific formatting from the replacement text
-                    self.formatter.apply_formatting_to_run(run, formatting, current_paragraph)
-                    
-                    # Apply paragraph-level formatting
-                    if formatting:
-                        self.formatter.apply_paragraph_formatting(current_paragraph, formatting)
-                    
-                    # If this segment has a paragraph break, create a new paragraph for the next segment
-                    if formatting.get('paragraph_break_after') and i < len(text_segments) - 1:
-                        # Create another new paragraph element
-                        new_p_xml = f'<w:p {nsdecls("w")}></w:p>'
-                        next_p_element = parse_xml(new_p_xml)
-                        
-                        # Insert after the current paragraph
-                        parent.insert(parent.index(current_paragraph._element) + 1, next_p_element)
-                        
-                        # Update current paragraph reference
-                        current_paragraph = Paragraph(next_p_element, parent)
-                    
-            modified = True
-            break  # Only process the first insert_after match
-            
-        return modified
 
     def replace_text_in_paragraph(self, paragraph) -> bool:
         """Replace text in a paragraph, handling splits across runs while preserving formatting."""
@@ -797,13 +680,6 @@ class TextReplacer:
                 self._text_cache.pop(para_id, None)
                 self._xml_cache.pop(para_id, None)
                 return True
-
-        # Check if any replacement for this paragraph is insert_after
-        has_insert_after = any('insert_after' in repl for repl in self.replacements if 'search' in repl and repl['search'] in full_text)
-
-        if has_insert_after:
-            # Handle insert_after operations without rebuilding paragraph structure
-            return self._handle_insert_after_in_paragraph(paragraph, full_text)
 
         # Apply text replacements using the extracted method
         new_text, modified = self.apply_text_replacements(full_text, paragraph)

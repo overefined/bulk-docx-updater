@@ -20,35 +20,35 @@ from config import (
 class TestConfigLoading:
     """Test cases for configuration loading functions."""
     
-    def test_load_replacements_from_json_list_format(self):
-        """Test loading replacements from JSON list format."""
-        json_data = [
-            {"search": "old1", "replace": "new1"},
-            {"search": "old2", "replace": "new2"}
-        ]
-        json_content = json.dumps(json_data)
+    def test_load_replacements_from_json_operations_format(self):
+        """Test loading replacements from JSON with 'operations' key."""
+        ops_data = {
+            "operations": [
+                {"op": "replace", "search": "old1", "replace": "new1"},
+                {"op": "replace", "search": "old2", "replace": "new2"}
+            ]
+        }
+        json_content = json.dumps(ops_data)
         
         with patch("builtins.open", mock_open(read_data=json_content)):
             result = load_replacements_from_json(Path("test.json"))
             
-            assert result == json_data
-    
-    def test_load_replacements_from_json_dict_format(self):
-        """Test loading replacements from JSON dict format with 'replacements' key."""
-        replacements_data = [
-            {"search": "old1", "replace": "new1"},
-            {"search": "old2", "replace": "new2"}
-        ]
-        json_data = {"replacements": replacements_data}
-        json_content = json.dumps(json_data)
-        
-        with patch("builtins.open", mock_open(read_data=json_content)):
-            result = load_replacements_from_json(Path("test.json"))
-            
-            assert result == replacements_data
+            assert result == [
+                {"search": "old1", "replace": "new1"},
+                {"search": "old2", "replace": "new2"}
+            ]
     
     def test_load_replacements_from_json_invalid_format(self):
-        """Test loading replacements from invalid JSON format."""
+        """Test loading replacements from invalid JSON format (no 'operations')."""
+        json_data = {"replacements": [{"search": "x", "replace": "y"}]}
+        json_content = json.dumps(json_data)
+        
+        with patch("builtins.open", mock_open(read_data=json_content)):
+            with pytest.raises(SystemExit):
+                load_replacements_from_json(Path("test.json"))
+    
+    def test_load_replacements_from_json_invalid_format_key(self):
+        """Test loading replacements from invalid JSON format key."""
         json_data = {"invalid": "format"}
         json_content = json.dumps(json_data)
         
@@ -72,7 +72,7 @@ class TestConfigLoading:
     
     def test_load_replacements_from_json_utf8_encoding(self):
         """Test that JSON files are loaded with UTF-8 encoding."""
-        json_data = [{"search": "café", "replace": "coffee"}]
+        json_data = {"operations": [{"op": "replace", "search": "café", "replace": "coffee"}]}
         json_content = json.dumps(json_data, ensure_ascii=False)
         
         mock_file = mock_open(read_data=json_content)
@@ -81,7 +81,7 @@ class TestConfigLoading:
             
             # Verify UTF-8 encoding was used
             mock_file.assert_called_once_with(Path("test.json"), 'r', encoding='utf-8')
-            assert result == json_data
+            assert result == [{"search": "café", "replace": "coffee"}]
 
 
 class TestReplacementValidation:
@@ -107,21 +107,12 @@ class TestReplacementValidation:
         # Should not raise any exception
         validate_replacements(replacements)
     
-    def test_validate_replacements_valid_insert_after(self):
-        """Test validation of valid search/insert_after pairs."""
-        replacements = [
-            {"search": "SITE PHOTOS", "insert_after": "Photo1paragraphbreakPhoto2"},
-            {"search": "APPENDIX", "insert_after": "pagebreak{format:center}New Content{/format}"}
-        ]
-        
-        # Should not raise any exception
-        validate_replacements(replacements)
+    # removed validation tests for unsupported features
     
     def test_validate_replacements_mixed_valid_types(self):
         """Test validation of mixed valid replacement types."""
         replacements = [
             {"search": "old", "replace": "new"},
-            {"search": "PHOTOS", "insert_after": "Photo content"},
             {"remove_empty_paragraphs_after": "PATTERN"}
         ]
         
@@ -138,15 +129,7 @@ class TestReplacementValidation:
         # Should not raise any exception
         validate_replacements(replacements)
     
-    def test_validate_replacements_with_cleanup_flag_insert_after(self):
-        """Test validation of insert_after operations with cleanup flag."""
-        replacements = [
-            {"search": "PHOTOS", "insert_after": "Photo content", "remove_empty_paragraphs_after": True},
-            {"search": "HEADER", "insert_after": "New content"}
-        ]
-        
-        # Should not raise any exception
-        validate_replacements(replacements)
+    # cleanup behavior covered by replace+cleanup tests
     
     def test_validate_replacements_invalid_dict_type(self):
         """Test validation fails with non-dict replacement."""
@@ -169,19 +152,9 @@ class TestReplacementValidation:
         with pytest.raises(SystemExit):
             validate_replacements(replacements)
     
-    def test_validate_replacements_missing_insert_after(self):
-        """Test validation fails when insert_after key is missing from search/insert_after pair."""
-        replacements = [{"search": "PHOTOS"}]
-        
-        with pytest.raises(SystemExit):
-            validate_replacements(replacements)
+    # removed tests for unsupported keys
     
-    def test_validate_replacements_conflicting_replace_and_insert_after(self):
-        """Test validation fails when both replace and insert_after are specified."""
-        replacements = [{"search": "PHOTOS", "replace": "replacement", "insert_after": "insertion"}]
-        
-        with pytest.raises(SystemExit):
-            validate_replacements(replacements)
+    # removed tests for unsupported key conflicts
     
     def test_validate_replacements_no_valid_keys(self):
         """Test validation fails when replacement has no valid action keys."""

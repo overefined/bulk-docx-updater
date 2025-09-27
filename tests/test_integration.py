@@ -42,9 +42,9 @@ class TestIntegrationWithRealDocuments:
         
         # Create test configuration
         test_config = {
-            "replacements": [
-                {"search": "old text", "replace": "new content"},
-                {"search": "test document", "replace": "sample document"}
+            "operations": [
+                {"op": "replace", "search": "old text", "replace": "new content"},
+                {"op": "replace", "search": "test document", "replace": "sample document"}
             ]
         }
         

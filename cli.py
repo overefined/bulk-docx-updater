@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 import logging
 
-from config import load_replacements_from_json, validate_replacements, parse_margin_settings
+from config import load_operations_from_json, validate_operations, parse_margin_settings
 from document_processor import DocxBulkUpdater
 from xml_inspector import inspect_docx_xml
 
@@ -77,9 +77,9 @@ def main():
     if args.standardize_margins:
         margins = parse_margin_settings(args)
     
-    # Determine replacements source
+    # Determine operations source
     if args.config:
-        replacements = load_replacements_from_json(args.config)
+        operations = load_operations_from_json(args.config)
     elif args.xml_search_file and args.xml_replace_file:
         # Handle XML file-based replacement
         try:
@@ -88,36 +88,34 @@ def main():
             with open(args.xml_replace_file, 'r', encoding='utf-8') as f:
                 xml_replace = f.read().strip()
 
-            replacements = [{
+            operations = [{
+                "op": "xml_replace",
                 "search": xml_search,
-                "replace": xml_replace,
-                "xml_mode": True,
-                # Keep file references for validation clarity and UX messaging
-                "search_file": str(args.xml_search_file),
-                "replace_file": str(args.xml_replace_file)
+                "replace": xml_replace
             }]
         except Exception as e:
             print(f"Error reading XML files: {e}", file=sys.stderr)
             sys.exit(1)
     elif args.search and args.replace:
-        replacement_config = {
+        op = {
+            "op": "replace",
             "search": args.search,
             "replace": args.replace
         }
-
-        replacements = [replacement_config]
+        operations = [op]
     elif args.set_table_headers:
-        # Create a replacement config just for setting table headers
-        replacement_config = {
-            "set_table_header_repeat": args.header_pattern or True
-        }
-        replacements = [replacement_config]
+        # Create an operation config for setting table headers
+        operations = [{
+            "op": "table_header_repeat",
+            "pattern": args.header_pattern if args.header_pattern else None,
+            "enabled": True
+        }]
     else:
         print("Error: Must provide either --config file, --xml-search-file/--xml-replace-file pair, --search/--replace pair, or --set-table-headers", file=sys.stderr)
         sys.exit(1)
     
-    # Validate replacements
-    validate_replacements(replacements)
+    # Validate operations
+    validate_operations(operations)
     
     # Find files to process
     path = Path(args.path)
@@ -138,14 +136,14 @@ def main():
     
     # Process files
     updater = DocxBulkUpdater(
-        replacements, 
+        operations, 
         preserve_formatting=not args.no_format,
         standardize_margins=args.standardize_margins,
         margins=margins,
         diff_context=args.diff_context
     )
     
-    print(f"Processing {len(files)} file(s) with {len(replacements)} replacement(s)...")
+    print(f"Processing {len(files)} file(s) with {len(operations)} operation(s)...")
     if args.dry_run:
         print("DRY RUN - No files will be modified")
     

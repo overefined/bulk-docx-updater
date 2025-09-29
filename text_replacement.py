@@ -21,15 +21,18 @@ from font_utils import FontFormatter
 class TextReplacer:
     """Handles text replacement operations in DOCX paragraphs."""
     
-    def __init__(self, replacements: List[Dict[str, str]], formatting_processor: FormattingProcessor):
-        self.replacements = replacements
+    def __init__(self, operations: List[Dict[str, str]], formatting_processor: FormattingProcessor):
+        # Keep only replace-like operations for this component
+        self.operations = [op for op in operations if op.get('op') in ('replace', 'xml_replace')]
+        self.text_ops = [op for op in self.operations if op.get('op') == 'replace']
+        self.xml_ops = [op for op in self.operations if op.get('op') == 'xml_replace']
         self.formatter = formatting_processor
-        # Cache compiled regex patterns for performance
+        # Cache compiled regex patterns for performance (for text ops only)
         self._compiled_patterns = {}
         self._precompile_patterns()
         # Cache page break information per paragraph to avoid repeated expensive checks
         self._page_break_cache = {}
-        # Cache search patterns for quick lookup
+        # Cache search patterns for quick lookup (only text ops)
         self._search_patterns = self._extract_search_patterns()
         self._search_patterns_set = set(self._search_patterns) if self._search_patterns else set()
         
@@ -42,19 +45,19 @@ class TextReplacer:
     def _extract_search_patterns(self) -> List[str]:
         """Extract all search patterns for quick lookup."""
         patterns = []
-        for replacement in self.replacements:
-            if 'search' in replacement and 'replace' in replacement:
-                patterns.append(replacement['search'])
+        for op in self.text_ops:
+            if 'search' in op and 'replace' in op:
+                patterns.append(op['search'])
         return patterns
         self._paragraph_has_page_breaks_cache = {}
     
     def _precompile_patterns(self):
         """Pre-compile regex patterns for all replacements to improve performance."""
-        for i, replacement in enumerate(self.replacements):
-            if 'search' not in replacement:
+        for i, op in enumerate(self.text_ops):
+            if 'search' not in op:
                 continue
-            search_text = replacement['search']
-            use_regex = bool(replacement.get('regex'))
+            search_text = op['search']
+            use_regex = bool(op.get('regex'))
             pattern = re.compile(search_text if use_regex else re.escape(search_text))
             self._compiled_patterns[i] = pattern
     
@@ -70,12 +73,11 @@ class TextReplacer:
         if not paragraphs:
             return False
         
-        # Find which paragraphs actually contain parts of the search patterns
-        for replacement in self.replacements:
-            if not self._is_valid_replacement(replacement):
+        # Find which paragraphs actually contain parts of the search patterns (text ops only)
+        for op in self.text_ops:
+            if 'search' not in op or 'replace' not in op:
                 continue
-                
-            search_text = replacement['search']
+            search_text = op['search']
             
             # Quick check: does the pattern exist across paragraphs?
             if not self._pattern_spans_paragraphs(paragraphs, search_text):
@@ -87,13 +89,13 @@ class TextReplacer:
                 continue
             
             # Apply replacement to the combined text
-            if self._apply_cross_paragraph_replacement(paragraphs, affected_paragraphs, replacement):
+            if self._apply_cross_paragraph_replacement(paragraphs, affected_paragraphs, op):
                 return True
         
         return False
     
     def _is_valid_replacement(self, replacement: Dict) -> bool:
-        """Check if replacement is valid for processing."""
+        """Deprecated: kept for compatibility; not used in operations mode."""
         return ('search' in replacement and 'replace' in replacement)
     
     def _pattern_spans_paragraphs(self, paragraphs: List[Paragraph], search_text: str) -> bool:
@@ -462,11 +464,8 @@ class TextReplacer:
         if xml_str is None:
             xml_str = paragraph._p.xml
 
-        # Create a filtered replacements list with only 'replace' operations
-        replace_only_replacements = [r for r in self.replacements
-                                   if 'search' in r and 'replace' in r and not r.get('xml_mode')]
-
-        if not replace_only_replacements:
+        # Only proceed if we have text operations
+        if not self.text_ops:
             return False
 
         try:
@@ -480,11 +479,8 @@ class TextReplacer:
                 text_elements = hyperlink.findall('.//w:t', {'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'})
                 full_text = ''.join(elem.text or '' for elem in text_elements)
 
-                # Apply replacements to the full text
-                original_replacements = self.replacements
-                self.replacements = replace_only_replacements
+                # Apply replacements to the full text using text ops
                 new_full_text, text_modified = self.apply_text_replacements(full_text, None)
-                self.replacements = original_replacements
 
                 if text_modified:
                     # Replace text content while preserving XML structure
@@ -495,10 +491,7 @@ class TextReplacer:
                     new_text_parts = []
                     for part in old_text_parts:
                         if part:  # Only process non-empty parts
-                            original_replacements = self.replacements
-                            self.replacements = replace_only_replacements
                             new_part, _ = self.apply_text_replacements(part, None)
-                            self.replacements = original_replacements
                             new_text_parts.append(new_part)
                         else:
                             new_text_parts.append(part)
@@ -525,10 +518,8 @@ class TextReplacer:
 
     def _replace_xml_in_paragraph(self, paragraph) -> bool:
         """Replace raw XML patterns in paragraph while preserving document structure."""
-        # Get all XML mode replacements
-        xml_replacements = [r for r in self.replacements if r.get('xml_mode')]
-
-        if not xml_replacements:
+        # Get all XML mode operations
+        if not self.xml_ops:
             return False
 
         modified = False
@@ -541,9 +532,9 @@ class TextReplacer:
         new_xml = paragraph_xml
 
         try:
-            for replacement in xml_replacements:
-                search_pattern = replacement.get('search')
-                replace_pattern = replacement.get('replace', '')
+            for op in self.xml_ops:
+                search_pattern = op.get('search')
+                replace_pattern = op.get('replace', '')
 
                 if not search_pattern:
                     continue
@@ -586,26 +577,17 @@ class TextReplacer:
         new_text = text
         modified = False
         
-        # Apply all replacements to the full text
-        for i, replacement in enumerate(self.replacements):
-            # Skip replacements that are cleanup actions (remove_empty_paragraphs_after)
-            if 'search' not in replacement:
-                continue
-            if 'replace' not in replacement:
-                continue
-            # Skip XML mode replacements in text processing
-            if replacement.get('xml_mode'):
-                continue
-                
-            search_text = replacement['search']
+        # Apply all text operations to the full text
+        for i, op in enumerate(self.text_ops):
+            search_text = op['search']
             # Use pre-compiled pattern if available, otherwise compile on-the-fly (fallback)
             pattern = self._compiled_patterns.get(i)
             if pattern is None:
-                use_regex = bool(replacement.get('regex'))
+                use_regex = bool(op.get('regex'))
                 pattern = re.compile(search_text if use_regex else re.escape(search_text))
             
             # Handle regular replace operation
-            replace_text = replacement['replace']
+            replace_text = op['replace']
             
             # Check if there's an existing page break after this search text (if paragraph provided)
             if paragraph is not None:

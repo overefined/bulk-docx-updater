@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from document_processor import DocxBulkUpdater
-from config import load_replacements_from_json
+from config import load_operations_from_json
 
 
 class DocxProfiler:
@@ -34,10 +34,10 @@ class DocxProfiler:
             return False
         
         try:
-            replacements = load_replacements_from_json(self.config_file)
-            print(f"Loaded {len(replacements)} replacements from config")
+            operations = load_operations_from_json(self.config_file)
+            print(f"Loaded {len(operations)} operations from config")
             
-            self.updater = DocxBulkUpdater(replacements)
+            self.updater = DocxBulkUpdater(operations)
             self.docx_files = list(self.test_dir.glob("*.docx"))
             
             if not self.docx_files:

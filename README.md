@@ -1,53 +1,97 @@
 # DOCX Bulk Updater
 
-Bulk find/replace in DOCX files with formatting and table support.
+Command-line tool to bulk update DOCX files.
 
 ## Usage
 
-```bash
-# Basic usage with config file
-python main.py /path/to/docs --config replace.json
+Basic form
 
-# Single replacement
-python main.py /path/to/docs --search "old" --replace "new"
+- `python main.py PATH [options]`
 
-# Preview changes only
-python main.py /path/to/docs --config replace.json --dry-run
+Options
 
-# Process subfolders
-python main.py /path/to/docs --config replace.json --recursive
+- `-c, --config PATH`  JSON file with `operations` array
+- `-s, --search TEXT`  Search text (with `--replace`)
+- `-r, --replace TEXT` Replacement text (with `--search`)
+- `--xml-search-file PATH`  File containing raw WordprocessingML XML to search
+- `--xml-replace-file PATH` File containing raw WordprocessingML XML to replace with
+- `--set-table-headers`  Set first row (or rows matching `--header-pattern`) to repeat as table headers
+- `--header-pattern TEXT` Pattern to identify header rows (used with `--set-table-headers`)
+- `--standardize-margins`  Enable margin standardization for all documents
+- `--margins VALUE`  Comma-separated margins in inches `top,bottom,left,right` or preset `letter|legal|a4`
+- `--margin-top FLOAT`    Override top margin (inches)
+- `--margin-bottom FLOAT` Override bottom margin (inches)
+- `--margin-left FLOAT`   Override left margin (inches)
+- `--margin-right FLOAT`  Override right margin (inches)
+- `--recursive`  Recurse into subdirectories
+- `--pattern GLOB`  File pattern (default: `*.docx`)
+- `--no-format`  Do not preserve formatting during text replacement
+- `--dry-run`  Show diffs without modifying files
+- `--xml-diff` Include XML-level diffs with `--dry-run`
+- `--diff-context INT`  Unified diff context lines (default: 3)
+- `--inspect-xml`  Inspect document XML (no modifications)
+- `--xml-pattern TEXT`  Filter for XML inspection mode
+- `--show-xml`  Print full formatted XML during inspection
+- `--verbose`  Enable verbose logging
+
+Examples
+
+- Config file: `python main.py ./docs --config replace.json`
+- Single replace: `python main.py ./docs --search "old" --replace "new"`
+- XML replace from files: `python main.py ./docs --xml-search-file in.xml --xml-replace-file out.xml`
+- Dry run with XML diff: `python main.py ./docs --config replace.json --dry-run --xml-diff`
+- Recursive with pattern: `python main.py ./docs --config replace.json --recursive --pattern "*.docx"`
+- Standardize margins: `python main.py ./docs --config replace.json --standardize-margins --margins 1.0,1.0,1.0,1.0`
+- Set table header rows: `python main.py ./docs --set-table-headers --header-pattern "Phase, Time, O2 %"`
+
+## Config JSON
+
+Use a JSON file with an `operations` array. Each item is one operation.
+
+Minimal structure
+
+```json
+{ "operations": [ /* one or more operations */ ] }
 ```
 
-## Operations
+Supported operations
 
-**Text replacement:**
+- Replace text
 ```json
 { "op": "replace", "search": "Old Text", "replace": "New Text" }
 ```
 
-**Table cell replacement:**
+- Replace XML (WordprocessingML)
 ```json
-{ "op": "replace_table_cell", "table_header": "Phase, Time, O2 %", "row": 0, "column": 0, "search": "Phase", "replace": "Time" }
+{ "op": "xml_replace", "search": "<w:t>old</w:t>", "replace": "<w:t>new</w:t>" }
 ```
 
-**Formatting:**
+- Replace XML from files
 ```json
-{ "op": "replace", "search": "Title", "replace": "{format:bold,center}TITLE{/format}" }
+{ "op": "xml_replace", "search_file": "search.xml", "replace_file": "replace.xml" }
 ```
 
-**Font size changes:**
+- Repeat table header rows
+```json
+{ "op": "table_header_repeat", "pattern": "Phase, Time, O2 %", "enabled": true }
+```
+
+- Change font sizes
 ```json
 { "op": "font_size", "from": 8, "to": 10 }
 ```
 
-## Config Example
-
+- Set table column widths (inches)
 ```json
-{
-  "operations": [
-    { "op": "replace", "search": "{{ old_var }}", "replace": "{{ new_var }}" },
-    { "op": "replace_table_cell", "table_header": "Phase, Time, O2 %", "row": 0, "column": 0, "replace": "Time" },
-    { "op": "replace_table_cell", "table_header": "Time, Phase, O2 %", "row": 0, "column": 1, "replace": "Phase" }
-  ]
-}
+{ "op": "set_table_column_widths", "table_header": "Phase, Time, O2 %", "column_widths": [1.5, 2.0, 1.2] }
+```
+
+- Replace a specific table cell
+```json
+{ "op": "replace_table_cell", "table_header": "Phase, Time, O2 %", "row": 0, "column": 1, "replace": "Time" }
+```
+
+- Cleanup empty paragraph after a pattern
+```json
+{ "op": "cleanup_empty_after", "pattern": "SOME HEADER" }
 ```

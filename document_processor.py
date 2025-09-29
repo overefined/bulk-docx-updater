@@ -23,10 +23,10 @@ from font_utils import FontFormatter
 class DocxBulkUpdater:
     """Main class for bulk DOCX document processing and text replacement."""
     
-    def __init__(self, replacements: List[Dict[str, str]], preserve_formatting: bool = True, 
+    def __init__(self, operations: List[Dict[str, any]], preserve_formatting: bool = True, 
                  standardize_margins: bool = False, margins: Optional[Dict[str, float]] = None,
                  diff_context: int = 3):
-        self.replacements = replacements
+        self.operations = operations
         self.preserve_formatting = preserve_formatting
         self.standardize_margins = standardize_margins
         self.margins = margins or {
@@ -40,7 +40,7 @@ class DocxBulkUpdater:
         
         # Initialize component processors
         self.formatter = FormattingProcessor()
-        self.text_replacer = TextReplacer(replacements, self.formatter)
+        self.text_replacer = TextReplacer(operations, self.formatter)
         
         # Pre-compute cross-paragraph patterns for optimization
         self._cross_paragraph_patterns = self._get_cross_paragraph_search_patterns()
@@ -51,9 +51,7 @@ class DocxBulkUpdater:
         self._text_cache = {}
         self._xml_cache = {}  # Cache XML strings to reduce xpath calls
         
-        # Pre-compile search patterns for faster matching
-        self._search_patterns_set = {repl.get('search', '') for repl in replacements if repl.get('search', '')}
-        self._search_patterns_set.discard('')  # Remove empty patterns
+        # No separate global search set needed; TextReplacer handles patterns
         
     def clear_caches(self):
         """Clear performance caches to free memory."""
@@ -99,12 +97,12 @@ class DocxBulkUpdater:
     def _get_cross_paragraph_search_patterns(self) -> List[str]:
         """Pre-compute list of search patterns that might span paragraphs."""
         patterns = []
-        for replacement in self.replacements:
-            if 'search' not in replacement:
+        for op in self.operations:
+            if op.get('op') != 'replace':
                 continue
-            if 'replace' not in replacement:
+            if 'search' not in op or 'replace' not in op:
                 continue
-            patterns.append(replacement['search'])
+            patterns.append(op['search'])
         return patterns
     
     def _chunk_has_cross_paragraph_potential(self, paragraphs: List, paragraph_texts: List[str] = None) -> bool:
@@ -303,61 +301,44 @@ class DocxBulkUpdater:
                 if self.standardize_document_margins(doc):
                     modified = True
 
-            # Set or unset table header repeat as configured
-            for replacement in self.replacements:
-                if "set_table_header_repeat" in replacement:
-                    header_config = replacement["set_table_header_repeat"]
-                    if isinstance(header_config, bool) and header_config:
-                        # Use the search pattern to identify header rows
-                        header_pattern = replacement.get("search")
-                        if self.set_table_header_repeat(doc, header_pattern, enable=True):
-                            modified = True
-                    elif isinstance(header_config, str):
-                        # Use the provided pattern string
-                        if self.set_table_header_repeat(doc, header_config, enable=True):
-                            modified = True
-                    elif isinstance(header_config, dict):
-                        # Use pattern from dict config
-                        header_pattern = header_config.get("pattern")
-                        enable = True if header_config.get("enabled", True) else False
-                        if self.set_table_header_repeat(doc, header_pattern, enable=enable):
-                            modified = True
+            # Execute non-text operations first
+            for op in self.operations:
+                if op.get('op') == 'table_header_repeat':
+                    header_pattern = op.get('pattern')
+                    enable = True if op.get('enabled', True) else False
+                    if self.set_table_header_repeat(doc, header_pattern, enable=enable):
+                        modified = True
 
             # Change font sizes if enabled
-            for replacement in self.replacements:
-                if "change_font_size" in replacement:
-                    font_config = replacement["change_font_size"]
-                    if isinstance(font_config, dict):
-                        from_size = font_config.get("from")
-                        to_size = font_config.get("to")
-                        if from_size and to_size:
-                            if self.change_font_sizes(doc, from_size, to_size):
-                                modified = True
-
-            # Remove empty paragraphs after patterns if cleanup is enabled
-            for replacement in self.replacements:
-                if "remove_empty_paragraphs_after" in replacement:
-                    cleanup_value = replacement["remove_empty_paragraphs_after"]
-                    if isinstance(cleanup_value, bool) and cleanup_value:
-                        # Use the search pattern from the same replacement
-                        if "search" in replacement:
-                            pattern = replacement["search"]
-                            if self.remove_empty_paragraphs_after_pattern(doc, pattern):
-                                modified = True
-                    elif isinstance(cleanup_value, str):
-                        # Use the provided pattern string
-                        if self.remove_empty_paragraphs_after_pattern(doc, cleanup_value):
+            for op in self.operations:
+                if op.get('op') == 'font_size':
+                    from_size = op.get('from')
+                    to_size = op.get('to')
+                    if from_size is not None and to_size is not None:
+                        if self.change_font_sizes(doc, from_size, to_size):
                             modified = True
 
+            # Set table column widths if specified
+            for op in self.operations:
+                if op.get('op') == 'set_table_column_widths':
+                    if self.set_table_column_widths(doc, op):
+                        modified = True
+
+            # Remove empty paragraphs after patterns if cleanup is enabled
+            for op in self.operations:
+                if op.get('op') == 'cleanup_empty_after':
+                    pattern = op.get('pattern')
+                    if pattern and self.remove_empty_paragraphs_after_pattern(doc, pattern):
+                        modified = True
+
             # Handle table cell replacements
-            for replacement in self.replacements:
-                if "replace_table_cell" in replacement:
-                    cell_config = replacement["replace_table_cell"]
-                    if self.replace_table_cell(doc, cell_config):
+            for op in self.operations:
+                if op.get('op') == 'replace_table_cell':
+                    if self.replace_table_cell(doc, op):
                         modified = True
 
             # Then do the text replacements and inserts
-            has_search_ops = any(("search" in r) and ("replace" in r) for r in self.replacements)
+            has_search_ops = any(op.get('op') in ('replace', 'xml_replace') for op in self.operations)
 
             if has_search_ops:
                 # Process both cross-paragraph and single-paragraph replacements efficiently
@@ -415,31 +396,35 @@ class DocxBulkUpdater:
         modified_doc = Document(temp_path)
 
         # Track formatting operations
-        for replacement in self.replacements:
-            if "set_table_header_repeat" in replacement:
-                header_config = replacement["set_table_header_repeat"]
-                if isinstance(header_config, str):
-                    count = self.set_table_header_repeat(modified_doc, header_config, enable=True)
-                    if count > 0:
-                        operation_results.append(f"Set {count} table header row(s) to repeat: '{header_config}'")
-                elif isinstance(header_config, dict):
-                    pat = header_config.get("pattern")
-                    enable = True if header_config.get("enabled", True) else False
-                    count = self.set_table_header_repeat(modified_doc, pat, enable=enable)
-                    if count > 0:
-                        action = "Set" if enable else "Unset"
-                        pattxt = f" '{pat}'" if pat else " (first row)"
-                        operation_results.append(f"{action} table header repeat on {count} row(s){pattxt}")
+        for op in self.operations:
+            if op.get('op') == 'table_header_repeat':
+                pat = op.get('pattern')
+                enable = True if op.get('enabled', True) else False
+                count = self.set_table_header_repeat(modified_doc, pat, enable=enable)
+                if count > 0:
+                    action = "Set" if enable else "Unset"
+                    pattxt = f" '{pat}'" if pat else " (first row)"
+                    operation_results.append(f"{action} table header repeat on {count} row(s){pattxt}")
 
-            if "change_font_size" in replacement:
-                font_config = replacement["change_font_size"]
-                if isinstance(font_config, dict):
-                    from_size = font_config.get("from")
-                    to_size = font_config.get("to")
-                    if from_size and to_size:
-                        count = self.change_font_sizes(modified_doc, from_size, to_size)
-                        if count > 0:
-                            operation_results.append(f"Changed font size from {from_size}pt to {to_size}pt in {count} text run(s)")
+            if op.get('op') == 'font_size':
+                from_size = op.get('from')
+                to_size = op.get('to')
+                if from_size is not None and to_size is not None:
+                    count = self.change_font_sizes(modified_doc, from_size, to_size)
+                    if count > 0:
+                        operation_results.append(f"Changed font size from {from_size}pt to {to_size}pt in {count} text run(s)")
+
+            if op.get('op') == 'set_table_column_widths':
+                count = self.set_table_column_widths(modified_doc, op)
+                if count > 0:
+                    table_header = op.get('table_header', 'first table')
+                    table_index = op.get('table_index')
+                    if table_index is not None:
+                        table_desc = f"table {table_index}"
+                    else:
+                        table_desc = f"table with header '{table_header}'" if table_header != 'first table' else table_header
+                    column_widths = op.get('column_widths', [])
+                    operation_results.append(f"Set column widths for {table_desc}: {column_widths}")
 
         # Apply standard text replacements
         self._process_all_text_replacements(modified_doc)
@@ -674,6 +659,98 @@ class DocxBulkUpdater:
                         run.font.size = to_size_pt
                         modified_count += 1
                         self._logger.debug(f"Changed font size from {from_size}pt to {to_size}pt")
+
+        return modified_count
+
+    def set_table_column_widths(self, doc: Document, table_config: Dict) -> int:
+        """Set column widths for tables matching specified criteria.
+
+        Args:
+            doc: The Document object
+            table_config: Configuration dictionary with:
+                - table_header: Header text to match for finding table (optional)
+                - table_index: Zero-based table index (optional, alternative to table_header)
+                - column_widths: List of column widths in inches
+
+        Returns:
+            Number of tables modified
+        """
+        from docx.shared import Inches
+
+        table_header = table_config.get('table_header')
+        table_index = table_config.get('table_index')
+        column_widths = table_config.get('column_widths', [])
+
+        if not column_widths:
+            self._logger.warning("No column widths specified")
+            return 0
+
+        modified_count = 0
+        target_table = None
+
+        # Find the target table
+        if table_index is not None:
+            # Use specific table index
+            if 0 <= table_index < len(doc.tables):
+                target_table = doc.tables[table_index]
+            else:
+                self._logger.warning(f"Table index {table_index} out of range (0-{len(doc.tables)-1})")
+                return 0
+        elif table_header is not None:
+            # Find table by header text
+            for table in doc.tables:
+                if table.rows:
+                    # Check first row for header match
+                    header_text_tab = '\t'.join(cell.text.strip() for cell in table.rows[0].cells)
+                    header_text_comma = ', '.join(cell.text.strip() for cell in table.rows[0].cells)
+                    header_text_space = ' '.join(cell.text.strip() for cell in table.rows[0].cells)
+
+                    if (table_header == header_text_tab or
+                        table_header == header_text_comma or
+                        table_header == header_text_space or
+                        table_header in header_text_space):  # Fallback to contains for partial matches
+                        target_table = table
+                        break
+
+            if target_table is None:
+                self._logger.warning(f"No table found with header matching '{table_header}'")
+                return 0
+        else:
+            # Default: use first table
+            if doc.tables:
+                target_table = doc.tables[0]
+            else:
+                self._logger.warning("No tables found in document")
+                return 0
+
+        # Apply column widths to the target table
+        if target_table:
+            try:
+                # Get the number of columns from the first row
+                if not target_table.rows:
+                    self._logger.warning("Target table has no rows")
+                    return 0
+
+                num_columns = len(target_table.rows[0].cells)
+
+                # Apply widths to each column
+                for col_idx in range(min(num_columns, len(column_widths))):
+                    width_inches = column_widths[col_idx]
+                    if width_inches > 0:  # Only set positive widths
+                        for row in target_table.rows:
+                            if col_idx < len(row.cells):
+                                row.cells[col_idx].width = Inches(width_inches)
+
+                modified_count = 1
+                self._logger.debug(f"Set column widths for table: {column_widths[:num_columns]}")
+
+                if len(column_widths) > num_columns:
+                    self._logger.warning(f"Table has {num_columns} columns but {len(column_widths)} widths specified")
+                elif len(column_widths) < num_columns:
+                    self._logger.info(f"Only set widths for first {len(column_widths)} of {num_columns} columns")
+
+            except Exception as e:
+                self._logger.warning(f"Failed to set column widths: {e}")
 
         return modified_count
 

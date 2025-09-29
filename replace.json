@@ -1,8 +1,10 @@
 {
   "operations": [
-    { "op": "font_size", "from": 5, "to": 6 },
-    { "op": "table_header_repeat", "pattern": "Spectrum\tTime\tPhase\tH2O\tSF6\tC2H4 (w)\tC2H4O (w)\tCO (w)\tNO (w)\tCO (d)\tNO (d)\tNO2 (d)\tNOx\tCO2 %\tVOC\tHCHO\tCH4\tC2H6\tPressure\tTemp", "enabled": true },
-    { "op": "table_header_repeat", "pattern": "Phase\tTime\tO2 %", "enabled": true },
-    { "op": "table_header_repeat", "pattern": "Phase\tTime\tTHC", "enabled": true }
+    { "op": "replace_table_cell", "table_header": "Phase, Time, O2 %", "row": 0, "column": 0, "search": "Phase", "replace": "TEMP_PLACEHOLDER_PHASE_HEADER" },
+    { "op": "replace_table_cell", "table_header": "TEMP_PLACEHOLDER_PHASE_HEADER, Time, O2 %", "row": 0, "column": 1, "search": "Time", "replace": "{format:left}Phase{/format}" },
+    { "op": "replace_table_cell", "table_header": "TEMP_PLACEHOLDER_PHASE_HEADER, Phase, O2 %", "row": 0, "column": 0, "search": "TEMP_PLACEHOLDER_PHASE_HEADER", "replace": "{format:left}Time{/format}" },
+    { "op": "replace", "search": "{{ o2.phase_fmtd() }}", "replace": "TEMP_PLACEHOLDER_PHASE" },
+    { "op": "replace", "search": "{{ o2.ReadingTimestamp }}", "replace": "{format:left}{{ o2.phase_fmtd() }}{/format}" },
+    { "op": "replace", "search": "TEMP_PLACEHOLDER_PHASE", "replace": "{format:left}{{ o2.ReadingTimestamp }}{/format}" }
   ]
 }

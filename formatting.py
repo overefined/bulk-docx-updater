@@ -11,6 +11,7 @@ import re
 from typing import List, Dict, Tuple
 from docx.shared import Pt
 from docx.enum.text import WD_BREAK, WD_ALIGN_PARAGRAPH
+from docx.table import _Cell
 
 
 class FormattingProcessor:
@@ -204,6 +205,33 @@ class FormattingProcessor:
         
         return text
 
+    def _is_paragraph_in_table_cell(self, paragraph) -> bool:
+        """Check if a paragraph is inside a table cell."""
+        try:
+            # Navigate up the parent hierarchy to find if we're in a table cell
+            parent = paragraph._parent
+            while parent is not None:
+                if isinstance(parent, _Cell):
+                    return True
+                parent = getattr(parent, '_parent', None)
+            return False
+        except:
+            # If we can't determine, assume it's not in a table cell
+            return False
+
+    def _get_table_cell_from_paragraph(self, paragraph):
+        """Get the table cell that contains this paragraph."""
+        try:
+            # Navigate up the parent hierarchy to find the table cell
+            parent = paragraph._parent
+            while parent is not None:
+                if isinstance(parent, _Cell):
+                    return parent
+                parent = getattr(parent, '_parent', None)
+            return None
+        except:
+            return None
+
     def apply_formatting_to_run(self, run, formatting: Dict, paragraph):
         """Apply formatting options to a run and paragraph."""
         # Apply font formatting to the run
@@ -231,9 +259,15 @@ class FormattingProcessor:
             br_run.add_break(WD_BREAK.PAGE)
     
     def apply_paragraph_formatting(self, paragraph, formatting: Dict):
-        """Apply paragraph-level formatting like alignment and spacing."""
-        if formatting.get('alignment'):
+        """Apply paragraph-level formatting like alignment and spacing.
+
+        For table cells, applies alignment directly to the cell's paragraph
+        to ensure proper alignment behavior.
+        """
+        if formatting.get('alignment') is not None:
+            # Apply alignment to the paragraph
             paragraph.alignment = formatting['alignment']
+
         if formatting.get('space_after'):
             paragraph.paragraph_format.space_after = Pt(formatting['space_after'])
         if formatting.get('space_before'):

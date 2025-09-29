@@ -17,6 +17,7 @@ from docx.shared import Inches
 
 from formatting import FormattingProcessor
 from text_replacement import TextReplacer
+from font_utils import FontFormatter
 
 
 class DocxBulkUpdater:
@@ -347,6 +348,13 @@ class DocxBulkUpdater:
                         # Use the provided pattern string
                         if self.remove_empty_paragraphs_after_pattern(doc, cleanup_value):
                             modified = True
+
+            # Handle table cell replacements
+            for replacement in self.replacements:
+                if "replace_table_cell" in replacement:
+                    cell_config = replacement["replace_table_cell"]
+                    if self.replace_table_cell(doc, cell_config):
+                        modified = True
 
             # Then do the text replacements and inserts
             has_search_ops = any(("search" in r) and ("replace" in r) for r in self.replacements)
@@ -732,3 +740,145 @@ class DocxBulkUpdater:
                     changes[section_name] = (orig_lines, mod_lines)
 
         return changes
+
+    def replace_table_cell(self, doc: Document, cell_config: Dict) -> bool:
+        """Replace content in a specific table cell.
+
+        Args:
+            doc: The Document to modify
+            cell_config: Configuration dict with keys:
+                - row: Row index (0-based)
+                - column: Column index (0-based)
+                - replace: New content (supports formatting tokens)
+                - table_index: Table index (0-based, optional)
+                - table_header: Header text to match for finding table (optional)
+                - search: Expected current content for validation (optional)
+
+        Returns:
+            True if replacement was made, False otherwise
+        """
+        row_index = cell_config['row']
+        col_index = cell_config['column']
+        new_content = cell_config['replace']
+        expected_content = cell_config.get('search')
+        table_index = cell_config.get('table_index')
+        table_header = cell_config.get('table_header')
+
+        try:
+            if table_index is not None:
+                # Use specified table index
+                if table_index >= len(doc.tables):
+                    self._logger.warning(f"Table index {table_index} not found (only {len(doc.tables)} tables exist)")
+                    return False
+
+                target_table = doc.tables[table_index]
+                target_table_index = table_index
+            elif table_header is not None:
+                # Find table by header content
+                target_table = None
+                target_table_index = None
+
+                for i, table in enumerate(doc.tables):
+                    if len(table.rows) > 0:
+                        # Check if header row matches the specified header pattern
+                        header_row = table.rows[0]
+
+                        # Try exact match first (tab-separated or comma-separated)
+                        header_text_tab = '\t'.join(cell.text.strip() for cell in header_row.cells)
+                        header_text_comma = ', '.join(cell.text.strip() for cell in header_row.cells)
+                        header_text_space = ' '.join(cell.text.strip() for cell in header_row.cells)
+
+                        if (table_header == header_text_tab or
+                            table_header == header_text_comma or
+                            table_header == header_text_space or
+                            table_header in header_text_space):  # Fallback to contains for partial matches
+                            target_table = table
+                            target_table_index = i
+                            break
+
+                if target_table is None:
+                    self._logger.warning(f"No table found with header matching '{table_header}'")
+                    return False
+            else:
+                # Default to first table if no specification provided
+                if not doc.tables:
+                    self._logger.warning("No tables found in document")
+                    return False
+
+                target_table = doc.tables[0]
+                target_table_index = 0
+
+            # Check if row exists
+            if row_index >= len(target_table.rows):
+                self._logger.warning(f"Row index {row_index} not found in table {target_table_index} (only {len(target_table.rows)} rows exist)")
+                return False
+
+            row = target_table.rows[row_index]
+
+            # Check if column exists
+            if col_index >= len(row.cells):
+                self._logger.warning(f"Column index {col_index} not found in table {target_table_index} row {row_index} (only {len(row.cells)} cells exist)")
+                return False
+
+            cell = row.cells[col_index]
+
+            # Validate current content if search parameter provided
+            if expected_content is not None:
+                current_content = cell.text.strip()
+                if current_content != expected_content:
+                    self._logger.warning(f"Table {target_table_index}[{row_index},{col_index}] content '{current_content}' does not match expected '{expected_content}'")
+                    return False
+
+            # Replace cell content using the established text replacement system
+            self._set_cell_content(cell, new_content)
+
+            self._logger.info(f"Replaced content in table {target_table_index}[{row_index},{col_index}] with: {new_content}")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error replacing table cell: {e}")
+            return False
+
+    def _set_cell_content(self, cell, content: str) -> None:
+        """Set cell content using the established pattern from _rebuild_paragraph_basic.
+
+        This follows the exact same pattern used in text_replacement.py for consistent
+        handling of formatting tokens and font property preservation.
+        """
+        # Get the first paragraph
+        para = cell.paragraphs[0]
+
+        # Store original font formatting from first run if available (same as _rebuild_paragraph_basic)
+        original_font_formatting = FontFormatter.get_base_font_formatting(para.runs)
+
+        # Clear all runs (same as _rebuild_paragraph_basic)
+        self.text_replacer._clear_paragraph(para)
+
+        if not content:
+            return
+
+        # Process formatting tokens in the new text (same as _rebuild_paragraph_basic)
+        text_segments = self.formatter.process_formatting_tokens(content, para)
+
+        # Add runs with the new text and formatting (same as _rebuild_paragraph_basic)
+        for text, formatting in text_segments:
+            if text:  # Only create runs for non-empty text
+                run = para.add_run(text)
+
+                # Apply original formatting as base (same as _rebuild_paragraph_basic)
+                FontFormatter.apply_font_properties(run, original_font_formatting)
+
+                # Apply new formatting from tokens, but only properties that were explicitly specified
+                # Filter out default False values that weren't actually specified in the formatting token
+                filtered_formatting = {}
+                for key, value in formatting.items():
+                    # Only include properties that were explicitly set (not default False values)
+                    if key in ['alignment', 'font_size', 'font_name', 'space_after', 'space_before'] or value is True:
+                        filtered_formatting[key] = value
+                    elif key in ['line_break_after', 'paragraph_break_after', 'page_break_after'] and value is True:
+                        filtered_formatting[key] = value
+
+                self.formatter.apply_formatting_to_run(run, filtered_formatting, para)
+
+                # Apply paragraph-level formatting (alignment, etc.)
+                self.formatter.apply_paragraph_formatting(para, formatting)

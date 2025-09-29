@@ -1,139 +1,53 @@
 # DOCX Bulk Updater
 
-Run simple, reliable bulk find/replace in DOCX files while preserving structure and formatting.
+Bulk find/replace in DOCX files with formatting and table support.
 
-## Install
-
-Requires Python 3.8+.
+## Usage
 
 ```bash
-# From the project root
-python -m venv .venv
-source .venv/bin/activate   # macOS/Linux
-# or
-.venv\Scripts\activate      # Windows
-
-pip install -r requirements.txt
-```
-
-## Quick Start
-
-```bash
-# Use a JSON config
+# Basic usage with config file
 python main.py /path/to/docs --config replace.json
 
-# Single replacement from CLI
+# Single replacement
 python main.py /path/to/docs --search "old" --replace "new"
 
-# Recurse into subfolders
-python main.py /path/to/docs --config replace.json --recursive
-
-# Preview only (no writes) with unified diff
+# Preview changes only
 python main.py /path/to/docs --config replace.json --dry-run
+
+# Process subfolders
+python main.py /path/to/docs --config replace.json --recursive
 ```
 
-## Common Tasks
+## Operations
 
-- Basic text replace (JSON config):
-  ```json
-  { "operations": [ { "op": "replace", "search": "Old", "replace": "New" } ] }
-  ```
-
-- Insert content after a match:
-  ```json
-  { "operations": [ { "op": "replace", "search": "SECTION HEADER", "replace": "SECTION HEADERpagebreak{format:center}More{/format}" } ] }
-  ```
-
-- Clean up the next paragraph after a match:
-  ```json
-  { "operations": [
-    { "op": "replace", "search": "PATTERN", "replace": "NEW" },
-    { "op": "cleanup_empty_after", "pattern": "{{ technician_resume }}" }
-  ] }
-  ```
-
-- Repeat table headers:
-  - Enable by pattern:
-    ```json
-    { "operations": [ { "op": "table_header_repeat", "pattern": "Spectrum    Time", "enabled": true } ] }
-    ```
-  - Disable by header text:
-    ```json
-    { "operations": [ { "op": "table_header_repeat", "pattern": "Phase\tTime\tO2 %", "enabled": false } ] }
-    ```
-  - CLI (all tables): `python main.py <path> --set-table-headers`
-  - CLI (specific header pattern): `python main.py <path> --set-table-headers --header-pattern "Spectrum    Time"`
-
-- Change font sizes across a document:
-  ```json
-  { "operations": [ { "op": "font_size", "from": 8, "to": 10 } ] }
-  ```
-
-## XML Mode
-
-Replace raw WordprocessingML XML using files.
-
-```bash
-python main.py /path/to/docs \
-  --xml-search-file patterns/search.xml \
-  --xml-replace-file patterns/replace.xml
+**Text replacement:**
+```json
+{ "op": "replace", "search": "Old Text", "replace": "New Text" }
 ```
 
-JSON config:
+**Table cell replacement:**
+```json
+{ "op": "replace_table_cell", "table_header": "Phase, Time, O2 %", "row": 0, "column": 0, "search": "Phase", "replace": "Time" }
+```
+
+**Formatting:**
+```json
+{ "op": "replace", "search": "Title", "replace": "{format:bold,center}TITLE{/format}" }
+```
+
+**Font size changes:**
+```json
+{ "op": "font_size", "from": 8, "to": 10 }
+```
+
+## Config Example
+
 ```json
 {
   "operations": [
-    { "op": "xml_replace", "search_file": "patterns/search.xml", "replace_file": "patterns/replace.xml" }
+    { "op": "replace", "search": "{{ old_var }}", "replace": "{{ new_var }}" },
+    { "op": "replace_table_cell", "table_header": "Phase, Time, O2 %", "row": 0, "column": 0, "replace": "Time" },
+    { "op": "replace_table_cell", "table_header": "Time, Phase, O2 %", "row": 0, "column": 1, "replace": "Phase" }
   ]
 }
 ```
-
-## Formatting
-
-- Global tokens: `pagebreak`, `linebreak`, `paragraphbreak`
-- Inline block: `{format:options}text{/format}`
-  - Options supported:
-    - Text: `bold`, `italic`, `underline`
-    - Alignment: `left`, `center`, `right`, `justify`
-    - Font size: `size12`, `size14`, `size16`, … (`sizeNN`)
-    - Spacing: `spacebefore6`, `spaceafter6`, … (`spacebeforeNN`, `spaceafterNN`)
-    - Font family: `font:Arial Narrow` (any font name)
-
-Example:
-```json
-{ "search": "Title", "replace": "{format:bold,center,size16,spaceafter6}TITLE{/format}" }
-```
-
-## Regex
-
-Use Python-style regex for text replacements.
-
-```json
-{ "operations": [ { "op": "replace", "search": "ACME\\s+Corp(oration)?", "replace": "TechCorp", "regex": true } ] }
-```
-
-## Useful Flags
-
-- `--recursive` process subfolders
-- `--pattern "*.docx"` change file match pattern
-- `--no-format` disable formatting processing
-- `--dry-run` preview changes only
-- `--xml-diff` include XML-only diffs in dry-run
-- Margin helpers: `--standardize-margins`, `--margins "1,1,1,1"`, `--margin-top 1.25` …
-
-## Inspect XML
-
-```bash
-python main.py /path/to/document.docx --inspect-xml  # show structure
-python main.py /path/to/document.docx --show-xml     # print full XML
-```
-
-## Examples
-
-```bash
-python main.py "/path/to/templates" -c replace.json
-python main.py "/path/to/test" -c replace.json --dry-run --xml-diff
-python main.py "/path/to/document.docx" --inspect-xml
-```
-
----

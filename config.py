@@ -46,6 +46,7 @@ def _operations_to_replacements(operations: List[Dict[str, Any]]) -> List[Dict[s
       - { op: 'table_header_repeat', pattern?, enabled? }
       - { op: 'font_size', from, to }
       - { op: 'xml_replace', search_file|search, replace_file|replace }
+      - { op: 'replace_table_cell', table_index?, row, column, search?, replace }
     """
     out: List[Dict[str, Any]] = []
     for i, op in enumerate(operations):
@@ -97,6 +98,33 @@ def _operations_to_replacements(operations: List[Dict[str, Any]]) -> List[Dict[s
             if 'replace' in op:
                 repl['replace'] = op['replace']
             out.append(repl)
+        elif kind == 'replace_table_cell':
+            # Required: row, column, replace
+            # Optional: table_index, table_header (for table selection), search (for validation)
+            row = op.get('row')
+            column = op.get('column')
+            replace = op.get('replace')
+            if row is None or column is None or replace is None:
+                logging.getLogger(__name__).error("Operation %s: 'replace_table_cell' requires 'row', 'column', and 'replace'", i)
+                sys.exit(1)
+
+            item: Dict[str, Any] = {
+                'replace_table_cell': {
+                    'row': row,
+                    'column': column,
+                    'replace': replace
+                }
+            }
+
+            # Optional parameters
+            if 'table_index' in op:
+                item['replace_table_cell']['table_index'] = op['table_index']
+            if 'table_header' in op:
+                item['replace_table_cell']['table_header'] = op['table_header']
+            if 'search' in op:
+                item['replace_table_cell']['search'] = op['search']
+
+            out.append(item)
         else:
             logging.getLogger(__name__).error("Unsupported operation kind '%s'", kind)
             sys.exit(1)
@@ -145,9 +173,10 @@ def validate_replacements(replacements: List[Dict[str, Any]]) -> None:
         has_standalone_cleanup_action = 'remove_empty_paragraphs_after' in repl and 'search' not in repl and 'search_file' not in repl
         has_table_header_repeat = 'set_table_header_repeat' in repl
         has_font_size_change = 'change_font_size' in repl
+        has_table_cell_replace = 'replace_table_cell' in repl
 
-        if not (has_search_replace or has_standalone_cleanup_action or has_table_header_repeat or has_font_size_change):
-            logging.getLogger(__name__).error("Error: Replacement %s must have either 'search'+'replace' keys, 'search_file'+'replace_file' keys, standalone 'remove_empty_paragraphs_after' key, 'set_table_header_repeat' key, or 'change_font_size' key", i)
+        if not (has_search_replace or has_standalone_cleanup_action or has_table_header_repeat or has_font_size_change or has_table_cell_replace):
+            logging.getLogger(__name__).error("Error: Replacement %s must have either 'search'+'replace' keys, 'search_file'+'replace_file' keys, standalone 'remove_empty_paragraphs_after' key, 'set_table_header_repeat' key, 'change_font_size' key, or 'replace_table_cell' key", i)
             sys.exit(1)
 
         # No special-case checks for unsupported keys
@@ -202,6 +231,40 @@ def validate_replacements(replacements: List[Dict[str, Any]]) -> None:
                 if 'pattern' in payload and not isinstance(payload['pattern'], str):
                     logging.getLogger(__name__).error("Error: 'pattern' in set_table_header_repeat must be string")
                     sys.exit(1)
+
+        # Validate replace_table_cell payloads
+        if 'replace_table_cell' in repl:
+            payload = repl['replace_table_cell']
+            if not isinstance(payload, dict):
+                logging.getLogger(__name__).error("Error: 'replace_table_cell' must be a dictionary")
+                sys.exit(1)
+
+            # Required fields
+            if 'row' not in payload or not isinstance(payload['row'], int) or payload['row'] < 0:
+                logging.getLogger(__name__).error("Error: 'row' in replace_table_cell must be a non-negative integer")
+                sys.exit(1)
+            if 'column' not in payload or not isinstance(payload['column'], int) or payload['column'] < 0:
+                logging.getLogger(__name__).error("Error: 'column' in replace_table_cell must be a non-negative integer")
+                sys.exit(1)
+            if 'replace' not in payload or not isinstance(payload['replace'], str):
+                logging.getLogger(__name__).error("Error: 'replace' in replace_table_cell must be a string")
+                sys.exit(1)
+
+            # Optional fields
+            if 'table_index' in payload and (not isinstance(payload['table_index'], int) or payload['table_index'] < 0):
+                logging.getLogger(__name__).error("Error: 'table_index' in replace_table_cell must be a non-negative integer")
+                sys.exit(1)
+            if 'table_header' in payload and not isinstance(payload['table_header'], str):
+                logging.getLogger(__name__).error("Error: 'table_header' in replace_table_cell must be a string")
+                sys.exit(1)
+            if 'search' in payload and not isinstance(payload['search'], str):
+                logging.getLogger(__name__).error("Error: 'search' in replace_table_cell must be a string")
+                sys.exit(1)
+
+            # Validate that table_index and table_header are not both specified
+            if 'table_index' in payload and 'table_header' in payload:
+                logging.getLogger(__name__).error("Error: 'table_index' and 'table_header' cannot both be specified in replace_table_cell")
+                sys.exit(1)
 
 
 

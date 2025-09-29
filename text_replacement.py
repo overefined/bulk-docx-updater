@@ -265,7 +265,7 @@ class TextReplacer:
     
     def _requires_special_handling(self, text_segments: List[Tuple[str, Dict]]) -> bool:
         """Check if text segments require special alignment or paragraph break handling."""
-        return any(seg_formatting.get('alignment') or seg_formatting.get('paragraph_break_after') 
+        return any(seg_formatting.get('alignment') is not None or seg_formatting.get('paragraph_break_after')
                   for _, seg_formatting in text_segments)
     
     def _apply_text_segments_to_paragraph(self, paragraph: Paragraph, text_segments, original_formatting, leading_whitespace_runs):
@@ -699,8 +699,8 @@ class TextReplacer:
 
         return True
 
-    def _handle_alignment_segments(self, paragraph, new_run_data: List[Tuple[str, Dict]], 
-                                 original_run, leading_whitespace_runs: Optional[List[str]] = None, 
+    def _handle_alignment_segments(self, paragraph, new_run_data: List[Tuple[str, Dict]],
+                                 original_run, leading_whitespace_runs: Optional[List[str]] = None,
                                  original_formatting: Optional[List[Dict]] = None):
         """Handle segments with different alignments or paragraph breaks by creating separate paragraphs if needed."""
         # Group segments by alignment and paragraph breaks
@@ -710,17 +710,18 @@ class TextReplacer:
         
         for text_segment, segment_formatting in new_run_data:
             seg_alignment = segment_formatting.get('alignment')
-            
+
             # Add segment to current group
             current_group.append((text_segment, segment_formatting))
-            
+
             # Check if this segment forces a new paragraph (alignment change or paragraph break)
             alignment_changed = seg_alignment != current_alignment and seg_alignment is not None
             has_paragraph_break = segment_formatting.get('paragraph_break_after', False)
-            
+
             if alignment_changed or has_paragraph_break:
-                # Finalize current group
-                segment_groups.append((current_alignment, current_group))
+                # Finalize current group - use segment alignment if current is None
+                group_alignment = seg_alignment if current_alignment is None else current_alignment
+                segment_groups.append((group_alignment, current_group))
                 current_group = []
                 current_alignment = seg_alignment
             elif seg_alignment is not None:
@@ -773,8 +774,9 @@ class TextReplacer:
                             self.formatter.apply_formatting_to_run(new_run, segment_formatting, paragraph)
             
             # Apply alignment to first paragraph
-            if first_alignment:
-                paragraph.alignment = first_alignment
+            if first_alignment is not None:
+                # Use formatter's method to handle table cell alignment properly
+                self.formatter.apply_paragraph_formatting(paragraph, {'alignment': first_alignment})
             
             # Create new paragraphs for remaining groups
             for alignment, group in segment_groups[1:]:
@@ -784,8 +786,9 @@ class TextReplacer:
                 new_paragraph = Paragraph(new_p_el, paragraph._parent)
                 
                 # Set alignment for new paragraph
-                if alignment:
-                    new_paragraph.alignment = alignment
+                if alignment is not None:
+                    # Use formatter's method to handle table cell alignment properly
+                    self.formatter.apply_paragraph_formatting(new_paragraph, {'alignment': alignment})
                 
                 # Add runs to new paragraph
                 for text_segment, segment_formatting in group:

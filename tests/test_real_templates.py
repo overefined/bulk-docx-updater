@@ -12,8 +12,8 @@ import json
 
 from docx import Document
 
-from document_processor import DocxBulkUpdater
-from config import load_operations_from_json
+from src.document_processor import DocxBulkUpdater
+from src.config import load_operations_from_json
 
 
 class TestRealTemplateProcessing:

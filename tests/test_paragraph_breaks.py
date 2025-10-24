@@ -8,8 +8,8 @@ import tempfile
 import json
 from pathlib import Path
 
-from document_processor import DocxBulkUpdater
-from config import load_replacements_from_json, validate_replacements
+from src.document_processor import DocxBulkUpdater
+from src.config import load_replacements_from_json, validate_replacements
 
 
 class TestParagraphBreakEndToEnd:

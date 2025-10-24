@@ -8,9 +8,9 @@ import os
 from unittest.mock import Mock, MagicMock
 from pathlib import Path
 
-from text_replacement import TextReplacer
-from formatting import FormattingProcessor
-from config import validate_replacements, validate_operations, load_operations_from_json, _process_file_references
+from src.text_replacement import TextReplacer
+from src.formatting import FormattingProcessor
+from src.config import validate_replacements, validate_operations, load_operations_from_json, _process_file_references
 
 
 class TestXMLReplacementConfig:

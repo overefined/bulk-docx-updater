@@ -9,9 +9,8 @@ import argparse
 from pathlib import Path
 import logging
 
-from config import load_operations_from_json, validate_operations, parse_margin_settings
-from document_processor import DocxBulkUpdater
-from xml_inspector import inspect_docx_xml
+from src.config import load_operations_from_json, validate_operations, parse_margin_settings
+from src.document_processor import DocxBulkUpdater
 
 
 def main():

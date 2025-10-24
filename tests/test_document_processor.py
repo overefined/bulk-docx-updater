@@ -8,7 +8,7 @@ import pytest
 from pathlib import Path
 from docx import Document
 
-from document_processor import DocxBulkUpdater
+from src.document_processor import DocxBulkUpdater
 
 
 class TestDocxBulkUpdater:

@@ -7,8 +7,8 @@ are correctly identified and replaced while preserving document structure.
 import pytest
 from docx import Document
 from docx.text.paragraph import Paragraph
-from text_replacement import TextReplacer
-from formatting import FormattingProcessor
+from src.text_replacement import TextReplacer
+from src.formatting import FormattingProcessor
 
 
 class TestCrossParagraphReplacement:

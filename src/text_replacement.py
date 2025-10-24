@@ -14,8 +14,8 @@ from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import nsdecls
 from docx.text.paragraph import Paragraph
 
-from formatting import FormattingProcessor
-from font_utils import FontFormatter
+from src.formatting import FormattingProcessor
+from src.font_utils import FontFormatter
 
 
 class TextReplacer:

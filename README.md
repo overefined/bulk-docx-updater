@@ -6,7 +6,7 @@ Command-line tool to bulk update DOCX files.
 
 Basic form
 
-- `python main.py PATH [options]`
+- `python src/main.py PATH [options]`
 
 Options
 
@@ -36,13 +36,13 @@ Options
 
 Examples
 
-- Config file: `python main.py ./docs --config replace.json`
-- Single replace: `python main.py ./docs --search "old" --replace "new"`
-- XML replace from files: `python main.py ./docs --xml-search-file in.xml --xml-replace-file out.xml`
-- Dry run with XML diff: `python main.py ./docs --config replace.json --dry-run --xml-diff`
-- Recursive with pattern: `python main.py ./docs --config replace.json --recursive --pattern "*.docx"`
-- Standardize margins: `python main.py ./docs --config replace.json --standardize-margins --margins 1.0,1.0,1.0,1.0`
-- Set table header rows: `python main.py ./docs --set-table-headers --header-pattern "Phase, Time, O2 %"`
+- Config file: `python src/main.py ./docs --config replace.json`
+- Single replace: `python src/main.py ./docs --search "old" --replace "new"`
+- XML replace from files: `python src/main.py ./docs --xml-search-file in.xml --xml-replace-file out.xml`
+- Dry run with XML diff: `python src/main.py ./docs --config replace.json --dry-run --xml-diff`
+- Recursive with pattern: `python src/main.py ./docs --config replace.json --recursive --pattern "*.docx"`
+- Standardize margins: `python src/main.py ./docs --config replace.json --standardize-margins --margins 1.0,1.0,1.0,1.0`
+- Set table header rows: `python src/main.py ./docs --set-table-headers --header-pattern "Phase, Time, O2 %"`
 
 ## Config JSON
 

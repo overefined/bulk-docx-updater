@@ -10,7 +10,7 @@ import sys
 from unittest.mock import patch, mock_open, Mock
 from pathlib import Path
 
-from config import (
+from src.config import (
     load_replacements_from_json,
     validate_replacements,
     parse_margin_settings

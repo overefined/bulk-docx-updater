@@ -7,8 +7,8 @@ Complex DOCX document tests are in test_real_templates.py and test_integration.p
 import pytest
 from docx import Document
 from docx.oxml import OxmlElement, ns
-from text_replacement import TextReplacer
-from formatting import FormattingProcessor
+from src.text_replacement import TextReplacer
+from src.formatting import FormattingProcessor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 

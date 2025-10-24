@@ -14,9 +14,9 @@ import logging
 from docx import Document
 from docx.shared import Inches
 
-from formatting import FormattingProcessor
-from text_replacement import TextReplacer
-from font_utils import FontFormatter
+from src.formatting import FormattingProcessor
+from src.text_replacement import TextReplacer
+from src.font_utils import FontFormatter
 
 
 class DocxBulkUpdater:

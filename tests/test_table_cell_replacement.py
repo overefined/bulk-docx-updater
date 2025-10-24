@@ -9,8 +9,8 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Inches
 
-from document_processor import DocxBulkUpdater
-from config import load_operations_from_json
+from src.document_processor import DocxBulkUpdater
+from src.config import load_operations_from_json
 
 
 class TestTableCellReplacement:

@@ -10,7 +10,7 @@ from pathlib import Path
 import sys
 from argparse import Namespace
 
-from cli import main
+from src.cli import main
 
 
 class TestCLIArgumentParsing:
@@ -19,10 +19,10 @@ class TestCLIArgumentParsing:
     @patch('sys.argv', ['main.py', '/test/path', '--config', 'config.json'])
     def test_basic_config_arguments(self):
         """Test parsing basic arguments with config file."""
-        with patch('cli.load_operations_from_json') as mock_load:
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json') as mock_load:
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater:
                         mock_updater.return_value.modify_docx.return_value = True
                         mock_load.return_value = [{"op": "replace", "search": "old", "replace": "new"}]
 
@@ -36,9 +36,9 @@ class TestCLIArgumentParsing:
     @patch('sys.argv', ['main.py', '/test/path', '--search', 'old', '--replace', 'new'])
     def test_search_replace_arguments(self):
         """Test parsing search/replace command line arguments."""
-        with patch('cli.validate_operations'):
+        with patch('src.cli.validate_operations'):
             with patch('pathlib.Path.is_file', return_value=True):
-                with patch('cli.DocxBulkUpdater') as mock_updater:
+                with patch('src.cli.DocxBulkUpdater') as mock_updater:
                     mock_updater.return_value.modify_docx.return_value = True
 
                     try:
@@ -60,11 +60,11 @@ class TestCLIArgumentParsing:
     @patch('sys.argv', ['main.py', '/test/path', '--recursive', '--config', 'config.json'])
     def test_recursive_flag(self):
         """Test recursive directory processing flag."""
-        with patch('cli.load_operations_from_json', return_value=[]):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=[]):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_dir', return_value=True):
                     with patch('pathlib.Path.rglob') as mock_rglob:
-                        with patch('cli.DocxBulkUpdater') as mock_updater:
+                        with patch('src.cli.DocxBulkUpdater') as mock_updater:
                             mock_rglob.return_value = [Path("test.docx")]
                             mock_updater.return_value.modify_docx.return_value = False
                             
@@ -79,11 +79,11 @@ class TestCLIArgumentParsing:
     @patch('sys.argv', ['main.py', '/test/path', '--config', 'config.json', '--pattern', '*.doc'])
     def test_custom_file_pattern(self):
         """Test custom file pattern argument."""
-        with patch('cli.load_operations_from_json', return_value=[]):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=[]):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_dir', return_value=True):
                     with patch('pathlib.Path.glob') as mock_glob:
-                        with patch('cli.DocxBulkUpdater') as mock_updater:
+                        with patch('src.cli.DocxBulkUpdater') as mock_updater:
                             mock_glob.return_value = [Path("test.doc")]
                             mock_updater.return_value.modify_docx.return_value = False
                             
@@ -98,10 +98,10 @@ class TestCLIArgumentParsing:
     @patch('sys.argv', ['main.py', '/test/path', '--config', 'config.json', '--no-format'])
     def test_no_format_flag(self):
         """Test disabling formatting preservation."""
-        with patch('cli.load_operations_from_json', return_value=[]):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=[]):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater:
                         mock_updater.return_value.modify_docx.return_value = False
                         
                         try:
@@ -116,11 +116,11 @@ class TestCLIArgumentParsing:
     @patch('sys.argv', ['main.py', '/test/path', '--config', 'config.json', '--standardize-margins'])
     def test_standardize_margins_flag(self):
         """Test margin standardization flag."""
-        with patch('cli.load_operations_from_json', return_value=[]):
-            with patch('cli.validate_operations'):
-                with patch('cli.parse_margin_settings', return_value={'top': 1.0, 'bottom': 1.0, 'left': 1.0, 'right': 1.0}):
+        with patch('src.cli.load_operations_from_json', return_value=[]):
+            with patch('src.cli.validate_operations'):
+                with patch('src.cli.parse_margin_settings', return_value={'top': 1.0, 'bottom': 1.0, 'left': 1.0, 'right': 1.0}):
                     with patch('pathlib.Path.is_file', return_value=True):
-                        with patch('cli.DocxBulkUpdater') as mock_updater:
+                        with patch('src.cli.DocxBulkUpdater') as mock_updater:
                             mock_updater.return_value.modify_docx.return_value = False
                             
                             try:
@@ -144,8 +144,8 @@ class TestCLIFileDiscovery:
         mock_file.is_file.return_value = True
         mock_file.is_dir.return_value = False
         
-        with patch('cli.Path', return_value=mock_file):
-            with patch('cli.DocxBulkUpdater') as mock_updater:
+        with patch('src.cli.Path', return_value=mock_file):
+            with patch('src.cli.DocxBulkUpdater') as mock_updater:
                 mock_updater.return_value.modify_docx.return_value = True
                 
                 try:
@@ -164,10 +164,10 @@ class TestCLIFileDiscovery:
         mock_path.is_dir.return_value = True
         mock_path.glob.return_value = [Path("file1.docx"), Path("file2.docx")]
 
-        with patch('cli.Path', return_value=mock_path):
-            with patch('cli.load_operations_from_json', return_value=[]):
-                with patch('cli.validate_operations'):
-                    with patch('cli.DocxBulkUpdater') as mock_updater:
+        with patch('src.cli.Path', return_value=mock_path):
+            with patch('src.cli.load_operations_from_json', return_value=[]):
+                with patch('src.cli.validate_operations'):
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater:
                         mock_updater.return_value.modify_docx.return_value = False
                         
                         try:
@@ -185,7 +185,7 @@ class TestCLIFileDiscovery:
         mock_path.is_file.return_value = False
         mock_path.is_dir.return_value = False
         
-        with patch('cli.Path', return_value=mock_path):
+        with patch('src.cli.Path', return_value=mock_path):
             with pytest.raises(SystemExit):
                 main()
     
@@ -197,9 +197,9 @@ class TestCLIFileDiscovery:
         mock_path.is_dir.return_value = True
         mock_path.glob.return_value = []  # No files found
 
-        with patch('cli.Path', return_value=mock_path):
-            with patch('cli.load_operations_from_json', return_value=[]):
-                with patch('cli.validate_operations'):
+        with patch('src.cli.Path', return_value=mock_path):
+            with patch('src.cli.load_operations_from_json', return_value=[]):
+                with patch('src.cli.validate_operations'):
                     with patch('builtins.print') as mock_print:
                         try:
                             main()
@@ -218,10 +218,10 @@ class TestCLIWorkflow:
         """Test complete successful processing workflow."""
         test_operations = [{"op": "replace", "search": "old", "replace": "new"}]
 
-        with patch('cli.load_operations_from_json', return_value=test_operations):
-            with patch('cli.validate_operations') as mock_validate:
+        with patch('src.cli.load_operations_from_json', return_value=test_operations):
+            with patch('src.cli.validate_operations') as mock_validate:
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater_class:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater_class:
                         mock_updater = Mock()
                         mock_updater.modify_docx.return_value = True
                         mock_updater_class.return_value = mock_updater
@@ -249,10 +249,10 @@ class TestCLIWorkflow:
             "Body": (["original line"], ["modified line"])
         }
 
-        with patch('cli.load_operations_from_json', return_value=test_operations):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=test_operations):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater_class:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater_class:
                         mock_updater = Mock()
                         mock_updater.get_document_changes_preview.return_value = test_changes
                         mock_updater.format_diff.return_value = "--- diff output ---"
@@ -279,10 +279,10 @@ class TestCLIWorkflow:
         text_changes = {"Body": (["a"], ["b"]) }
         xml_changes = {"Body(XML)": (["<p>a</p>"], ["<p>b</p>"]) }
 
-        with patch('cli.load_operations_from_json', return_value=test_operations):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=test_operations):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater_class:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater_class:
                         mock_updater = Mock()
                         mock_updater.get_document_changes_preview.return_value = text_changes
                         mock_updater.get_document_xml_changes_preview.return_value = xml_changes
@@ -306,7 +306,7 @@ class TestCLIWorkflow:
     def test_processing_with_no_changes(self):
         """Test processing workflow when no changes are made."""
         with patch('pathlib.Path.is_file', return_value=True):
-            with patch('cli.DocxBulkUpdater') as mock_updater_class:
+            with patch('src.cli.DocxBulkUpdater') as mock_updater_class:
                 mock_updater = Mock()
                 mock_updater.modify_docx.return_value = False  # No changes made
                 mock_updater_class.return_value = mock_updater
@@ -325,7 +325,7 @@ class TestCLIWorkflow:
     def test_processing_with_exception(self):
         """Test processing workflow when exception occurs."""
         with patch('pathlib.Path.is_file', return_value=True):
-            with patch('cli.DocxBulkUpdater') as mock_updater_class:
+            with patch('src.cli.DocxBulkUpdater') as mock_updater_class:
                 mock_updater = Mock()
                 mock_updater.modify_docx.side_effect = Exception("Test error")
                 mock_updater_class.return_value = mock_updater
@@ -346,11 +346,11 @@ class TestCLIWorkflow:
         test_files = [Path("file1.docx"), Path("file2.docx"), Path("file3.docx")]
         test_operations = [{"op": "replace", "search": "old", "replace": "new"}]
 
-        with patch('cli.load_operations_from_json', return_value=test_operations):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=test_operations):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_dir', return_value=True):
                     with patch('pathlib.Path.glob', return_value=test_files):
-                        with patch('cli.DocxBulkUpdater') as mock_updater_class:
+                        with patch('src.cli.DocxBulkUpdater') as mock_updater_class:
                             mock_updater = Mock()
                             mock_updater.modify_docx.side_effect = [True, False, True]  # Mixed results
                             mock_updater_class.return_value = mock_updater
@@ -375,10 +375,10 @@ class TestCLIMarginSettings:
     @patch('sys.argv', ['main.py', 'test.docx', '--config', 'config.json', '--margins', '0.5,1.0,0.75,1.25'])
     def test_custom_margin_values(self):
         """Test CLI with custom margin values."""
-        with patch('cli.load_operations_from_json', return_value=[]):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=[]):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater:
                         mock_updater.return_value.modify_docx.return_value = False
                         
                         try:
@@ -393,10 +393,10 @@ class TestCLIMarginSettings:
     @patch('sys.argv', ['main.py', 'test.docx', '--config', 'config.json', '--margin-top', '0.5'])
     def test_individual_margin_setting(self):
         """Test CLI with individual margin setting."""
-        with patch('cli.load_operations_from_json', return_value=[]):
-            with patch('cli.validate_operations'):
+        with patch('src.cli.load_operations_from_json', return_value=[]):
+            with patch('src.cli.validate_operations'):
                 with patch('pathlib.Path.is_file', return_value=True):
-                    with patch('cli.DocxBulkUpdater') as mock_updater:
+                    with patch('src.cli.DocxBulkUpdater') as mock_updater:
                         mock_updater.return_value.modify_docx.return_value = False
                         
                         try:

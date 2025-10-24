@@ -14,7 +14,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.table import Table, _Row, _Cell
 
-from formatting import FormattingProcessor
+from src.formatting import FormattingProcessor
 from simple_table_alignment import apply_table_cell_left_alignment
 
 
@@ -177,7 +177,7 @@ class TestTableCellAlignment:
 
     def test_requires_special_handling_with_alignment(self):
         """Test that _requires_special_handling correctly detects alignment formatting."""
-        from text_replacement import TextReplacer
+        from src.text_replacement import TextReplacer
 
         # Create a mock replacer (we only need the method)
         replacer = TextReplacer([], self.formatter)

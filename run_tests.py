@@ -67,7 +67,7 @@ def main():
     
     # Add coverage options
     if args.coverage:
-        cmd.extend(["--cov=.", "--cov-report=term-missing", "--cov-report=html"])
+        cmd.extend(["--cov=src", "--cov-report=term-missing", "--cov-report=html"])
     
     # Add verbosity options
     if args.verbose:

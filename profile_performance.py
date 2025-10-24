@@ -10,8 +10,8 @@ from pathlib import Path
 # Add current directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from document_processor import DocxBulkUpdater
-from config import load_operations_from_json
+from src.document_processor import DocxBulkUpdater
+from src.config import load_operations_from_json
 
 
 class DocxProfiler:

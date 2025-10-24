@@ -6,7 +6,7 @@ Command-line tool to bulk update DOCX files.
 
 Basic form
 
-- `python src/main.py PATH [options]`
+- `python main.py PATH [options]`
 
 Options
 
@@ -60,6 +60,16 @@ JSON array of operations:
 { "set_table_column_widths": { "table_header": "Phase, Time", "column_widths": [1.5, 2.0] } }
 { "table_header_repeat": { "pattern": "Phase, Time", "enabled": true } }
 ```
+
+**Image replacement**
+```json
+{ "replace_image": "path/to/logo.png" }
+{ "replace_image": { "image_path": "logo.png", "scale": 0.5, "center": true } }
+```
+
+Replaces the first image, maintaining aspect ratio. Optional: `scale` to resize (0.5 = 50%, 2.0 = 200%), `center` to center horizontally (automatically converts inline images to floating when centering).
+
+Advanced: Add `name`/`alt_text`/`index` to target specific images.
 
 **Other**
 ```json

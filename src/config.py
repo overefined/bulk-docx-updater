@@ -33,6 +33,13 @@ def load_operations_from_json(config_file: Path) -> List[Dict[str, Any]]:
             # Normalize and load file references
             operations[i] = _normalize_operation(operation, config_dir)
 
+        # Validate operations (may modify them, e.g., replace_image 'value' -> 'image_path')
+        validate_operations(operations)
+
+        # Process file references again after validation to handle paths created during validation
+        for i, operation in enumerate(operations):
+            operations[i] = _process_file_references(operation, config_dir)
+
         return operations
 
     except Exception as e:
@@ -71,7 +78,8 @@ def _normalize_operation(operation: Dict, config_dir: Path) -> Dict:
         'cleanup_empty_after',
         'table_header_repeat',
         'font_size',
-        'remove_title'
+        'remove_title',
+        'replace_image'
     ]
 
     for op_name in single_key_ops:
@@ -115,6 +123,15 @@ def _process_file_references(operation: Dict, config_dir: Path) -> Dict:
         except Exception as e:
             logging.getLogger(__name__).error("Error loading replace file %s: %s", replace_file_path, e)
             sys.exit(1)
+
+    # Handle image_path - resolve relative to config directory
+    if 'image_path' in operation:
+        image_path_str = operation['image_path']
+
+        # Resolve relative paths relative to config directory
+        if not Path(image_path_str).is_absolute():
+            # Relative path - resolve relative to config directory
+            operation['image_path'] = str(config_dir / image_path_str)
 
     return operation
 
@@ -282,6 +299,52 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
             # Support both {"remove_title": true} and {"op": "remove_title"}
             pass
 
+        elif op_type == 'replace_image':
+            # Validate replace_image operation
+            # Handle both {"replace_image": "path"} (normalized to 'value') and {"replace_image": {"image_path": "path"}}
+            if 'value' in op and isinstance(op['value'], str):
+                # Normalize: {"op": "replace_image", "value": "path"} -> {"op": "replace_image", "image_path": "path"}
+                op['image_path'] = op.pop('value')
+
+            if 'image_path' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace_image' requires 'image_path' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['image_path'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'image_path' must be string", i)
+                sys.exit(1)
+
+            # Optional fields
+            if 'name' in op and not isinstance(op['name'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'name' must be string", i)
+                sys.exit(1)
+
+            if 'alt_text' in op and not isinstance(op['alt_text'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'alt_text' must be string", i)
+                sys.exit(1)
+
+            if 'index' in op and not isinstance(op['index'], int):
+                logging.getLogger(__name__).error("Error: Operation %s: 'index' must be integer", i)
+                sys.exit(1)
+
+            if 'scale' in op:
+                if not isinstance(op['scale'], (int, float)):
+                    logging.getLogger(__name__).error("Error: Operation %s: 'scale' must be a number", i)
+                    sys.exit(1)
+                if op['scale'] <= 0:
+                    logging.getLogger(__name__).error("Error: Operation %s: 'scale' must be greater than 0", i)
+                    sys.exit(1)
+
+            if 'center' in op and not isinstance(op['center'], bool):
+                logging.getLogger(__name__).error("Error: Operation %s: 'center' must be boolean", i)
+                sys.exit(1)
+
+            # Cannot specify multiple identifiers
+            identifier_count = sum([1 for key in ['name', 'alt_text', 'index'] if key in op])
+            if identifier_count > 1:
+                logging.getLogger(__name__).error("Error: Operation %s: can only specify one of 'name', 'alt_text', or 'index'", i)
+                sys.exit(1)
+
         else:
             logging.getLogger(__name__).error("Error: Operation %s: unsupported operation type '%s'", i, op_type)
             sys.exit(1)
@@ -399,7 +462,7 @@ def _operations_to_replacements(operations: List[Dict[str, Any]]) -> List[Dict[s
 def load_replacements_from_json(config_file: Path) -> List[Dict[str, Any]]:
     """Load operations from JSON and convert to internal replacements."""
     operations = load_operations_from_json(config_file)
-    validate_operations(operations)
+    # Validation already done in load_operations_from_json
     return _operations_to_replacements(operations)
 
 

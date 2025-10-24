@@ -13,6 +13,8 @@ from typing import List, Dict, Optional, Tuple
 import logging
 from docx import Document
 from docx.shared import Inches
+from docx.oxml.ns import qn
+from docx.oxml import parse_xml
 
 from src.formatting import FormattingProcessor
 from src.text_replacement import TextReplacer
@@ -357,6 +359,12 @@ class DocxBulkUpdater:
             for op in self.operations:
                 if op.get('op') == 'replace_table_cell':
                     if self.replace_table_cell(doc, op):
+                        modified = True
+
+            # Handle image replacements
+            for op in self.operations:
+                if op.get('op') == 'replace_image':
+                    if self.replace_image(doc, op):
                         modified = True
 
             # Then do the text replacements and inserts
@@ -988,3 +996,281 @@ class DocxBulkUpdater:
 
                 # Apply paragraph-level formatting (alignment, etc.)
                 self.formatter.apply_paragraph_formatting(para, formatting)
+
+    def replace_image(self, doc: Document, image_config: Dict) -> bool:
+        """Replace an image in the document with a new image file.
+
+        Args:
+            doc: The Document to modify
+            image_config: Configuration dict with keys:
+                - image_path: Path to the new image file (required)
+                - name: Image name to match (e.g., "Picture 2") (optional)
+                - alt_text: Alt text/description to match (optional)
+                - index: Zero-based index of image to replace (optional, default: 0)
+                - scale: Scale factor for the image (e.g., 0.5 for 50%, 2.0 for 200%) (optional)
+                - center: Center the image horizontally on the page (optional, default: False)
+
+        Returns:
+            True if replacement was made, False otherwise
+        """
+        image_path = Path(image_config['image_path'])
+        image_name = image_config.get('name')
+        alt_text = image_config.get('alt_text')
+        image_index = image_config.get('index', 0)
+        scale = image_config.get('scale', 1.0)
+        center = image_config.get('center', False)
+
+        # Validate image file exists
+        if not image_path.exists():
+            self._logger.error(f"Image file not found: {image_path}")
+            return False
+
+        # Find all images in the document
+        found_images = []
+        for para in doc.paragraphs:
+            for run in para.runs:
+                drawings = run._element.findall(qn('w:drawing'))
+                for drawing in drawings:
+                    # Check for both inline and anchor (floating) images
+                    inline = drawing.find(qn('wp:inline'))
+                    anchor = drawing.find(qn('wp:anchor'))
+
+                    image_element = inline if inline is not None else anchor
+                    if image_element is not None:
+                        docPr = image_element.find(qn('wp:docPr'))
+                        if docPr is not None:
+                            found_images.append((drawing, image_element, docPr, para, run))
+
+        if not found_images:
+            self._logger.warning("No images found in document")
+            return False
+
+        # Select target image based on criteria
+        target_image = None
+
+        if image_name:
+            # Match by name
+            for drawing, image_element, docPr, para, run in found_images:
+                if docPr.get('name') == image_name:
+                    target_image = (drawing, image_element, docPr, para, run)
+                    break
+            if not target_image:
+                self._logger.warning(f"No image found with name '{image_name}'")
+                return False
+
+        elif alt_text:
+            # Match by alt text/description
+            for drawing, image_element, docPr, para, run in found_images:
+                if docPr.get('descr') == alt_text:
+                    target_image = (drawing, image_element, docPr, para, run)
+                    break
+            if not target_image:
+                self._logger.warning(f"No image found with alt text '{alt_text}'")
+                return False
+
+        else:
+            # Use index (default: first image)
+            if image_index >= len(found_images):
+                self._logger.warning(f"Image index {image_index} out of range (found {len(found_images)} images)")
+                return False
+            target_image = found_images[image_index]
+
+        drawing, image_element, docPr, para, run = target_image
+
+        # Get the blip element (contains the relationship ID to the image)
+        blip = drawing.find('.//{http://schemas.openxmlformats.org/drawingml/2006/main}blip')
+        if blip is None:
+            self._logger.error("Could not find blip element in image")
+            return False
+
+        # Get the relationship ID
+        rel_id = blip.get(qn('r:embed'))
+        if not rel_id:
+            self._logger.error("Could not find relationship ID in image")
+            return False
+
+        # Get the document part and its relationships
+        doc_part = doc.part
+
+        # Get the related image part
+        try:
+            image_part = doc_part.related_parts[rel_id]
+        except KeyError:
+            self._logger.error(f"Relationship ID {rel_id} not found")
+            return False
+
+        # Read the new image
+        with open(image_path, 'rb') as f:
+            new_image_data = f.read()
+
+        # Get the new image dimensions using PIL
+        try:
+            from PIL import Image as PILImage
+            import io
+
+            new_img = PILImage.open(io.BytesIO(new_image_data))
+            new_width_px, new_height_px = new_img.size
+
+            # Get current dimensions from the extent element
+            # Extent is in EMUs (English Metric Units): 914400 EMU = 1 inch
+            extent = image_element.find(qn('wp:extent'))
+            if extent is not None:
+                current_width_emu = int(extent.get('cx'))
+                current_height_emu = int(extent.get('cy'))
+
+                # Calculate new dimensions maintaining aspect ratio of new image
+                # Use current width and calculate height based on new image's aspect ratio
+                new_aspect_ratio = new_width_px / new_height_px
+                new_height_emu = int(current_width_emu / new_aspect_ratio)
+
+                # Apply scale factor if specified
+                if scale != 1.0:
+                    current_width_emu = int(current_width_emu * scale)
+                    new_height_emu = int(new_height_emu * scale)
+                    self._logger.debug(f"Applied scale factor: {scale}")
+
+                # Update extent
+                extent.set('cx', str(current_width_emu))
+                extent.set('cy', str(new_height_emu))
+
+                # Also update the extent in the graphic element if it exists
+                graphic_extent = drawing.find('.//{http://schemas.openxmlformats.org/drawingml/2006/main}xfrm/{http://schemas.openxmlformats.org/drawingml/2006/main}ext')
+                if graphic_extent is not None:
+                    graphic_extent.set('cx', str(current_width_emu))
+                    graphic_extent.set('cy', str(new_height_emu))
+
+                self._logger.debug(f"Updated image dimensions to maintain aspect ratio: {current_width_emu} x {new_height_emu} EMU")
+        except ImportError:
+            self._logger.warning("PIL (Pillow) not available - cannot adjust image dimensions. Image may appear skewed.")
+        except Exception as e:
+            self._logger.warning(f"Could not adjust image dimensions: {e}")
+
+        # Center the image horizontally if requested
+        if center:
+            anchor = drawing.find(qn('wp:anchor'))
+            inline = drawing.find(qn('wp:inline'))
+
+            if anchor is not None:
+                # Floating (anchor) image - modify position in XML
+                positionH = anchor.find(qn('wp:positionH'))
+                if positionH is not None:
+                    # Remove posOffset if it exists
+                    posOffset = positionH.find(qn('wp:posOffset'))
+                    if posOffset is not None:
+                        positionH.remove(posOffset)
+
+                    # Add or update align element
+                    align = positionH.find(qn('wp:align'))
+                    if align is None:
+                        from lxml import etree
+                        align = etree.SubElement(positionH, qn('wp:align'))
+                        align.text = 'center'
+                    else:
+                        align.text = 'center'
+
+                    # Set relativeFrom to page for centering
+                    positionH.set('relativeFrom', 'page')
+
+                    self._logger.debug("Centered floating image horizontally on page")
+
+            elif inline is not None:
+                # Inline image - convert to floating and center
+                try:
+                    from lxml import etree
+
+                    # Get the inline element properties we need to preserve
+                    inline_docPr = inline.find(qn('wp:docPr'))
+                    inline_extent = inline.find(qn('wp:extent'))
+                    inline_graphic = inline.find(qn('a:graphic'))
+
+                    # Create a new anchor element to replace the inline
+                    anchor = etree.Element(qn('wp:anchor'), nsmap=inline.nsmap)
+
+                    # Copy basic attributes from inline
+                    anchor.set('distT', '0')
+                    anchor.set('distB', '0')
+                    anchor.set('distL', '114300')
+                    anchor.set('distR', '114300')
+                    anchor.set('simplePos', '0')
+                    anchor.set('relativeHeight', '251658240')
+                    anchor.set('behindDoc', '0')
+                    anchor.set('locked', '0')
+                    anchor.set('layoutInCell', '1')
+                    anchor.set('allowOverlap', '1')
+
+                    # Add simplePos
+                    simplePos = etree.SubElement(anchor, qn('wp:simplePos'))
+                    simplePos.set('x', '0')
+                    simplePos.set('y', '0')
+
+                    # Add horizontal position (centered on page)
+                    positionH = etree.SubElement(anchor, qn('wp:positionH'))
+                    positionH.set('relativeFrom', 'page')
+                    align_h = etree.SubElement(positionH, qn('wp:align'))
+                    align_h.text = 'center'
+
+                    # Add vertical position (relative to paragraph)
+                    positionV = etree.SubElement(anchor, qn('wp:positionV'))
+                    positionV.set('relativeFrom', 'paragraph')
+                    posOffset_v = etree.SubElement(positionV, qn('wp:posOffset'))
+                    posOffset_v.text = '0'
+
+                    # Copy extent (size)
+                    if inline_extent is not None:
+                        anchor.append(etree.fromstring(etree.tostring(inline_extent)))
+
+                    # Add effectExtent
+                    effectExtent = etree.SubElement(anchor, qn('wp:effectExtent'))
+                    effectExtent.set('l', '0')
+                    effectExtent.set('t', '0')
+                    effectExtent.set('r', '0')
+                    effectExtent.set('b', '0')
+
+                    # Add wrapSquare for text wrapping
+                    wrapSquare = etree.SubElement(anchor, qn('wp:wrapSquare'))
+                    wrapSquare.set('wrapText', 'bothSides')
+
+                    # Copy docPr (document properties)
+                    if inline_docPr is not None:
+                        anchor.append(etree.fromstring(etree.tostring(inline_docPr)))
+
+                    # Add cNvGraphicFramePr
+                    cNvGraphicFramePr = etree.SubElement(anchor, qn('wp:cNvGraphicFramePr'))
+
+                    # Copy graphic (contains the actual image reference)
+                    if inline_graphic is not None:
+                        anchor.append(etree.fromstring(etree.tostring(inline_graphic)))
+
+                    # Replace inline with anchor in the drawing
+                    drawing.remove(inline)
+                    drawing.append(anchor)
+
+                    # Add spacing after the paragraph to maintain layout
+                    # This prevents the paragraph from collapsing when the inline image is removed
+                    if para is not None:
+                        from docx.shared import Pt
+                        # Get the image height to use as spacing
+                        if inline_extent is not None:
+                            height_emu = int(inline_extent.get('cy', 0))
+                            # Convert EMU to points (1 point = 12700 EMU)
+                            height_pt = height_emu / 12700
+                            para.paragraph_format.space_after = Pt(height_pt)
+                            self._logger.debug(f"Added {height_pt:.1f}pt spacing after paragraph to maintain layout")
+
+                    self._logger.debug("Converted inline image to floating and centered it horizontally")
+
+                except Exception as e:
+                    self._logger.warning(f"Could not convert inline image to floating: {e}. Falling back to paragraph centering.")
+                    # Fallback: center the paragraph
+                    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+                    if para is not None:
+                        para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                        self._logger.debug("Centered inline image by centering its paragraph")
+
+        # Replace the image data in the existing image part
+        # Note: We only replace the blob data, not the content type
+        # The content type should match the original format for compatibility
+        image_part._blob = new_image_data
+
+        self._logger.info(f"Replaced image (name: {docPr.get('name')}) with {image_path}")
+        return True

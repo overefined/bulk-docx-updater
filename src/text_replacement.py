@@ -761,10 +761,12 @@ class TextReplacer:
                 self.formatter.apply_paragraph_formatting(paragraph, {'alignment': first_alignment})
             
             # Create new paragraphs for remaining groups
+            last_p_el = paragraph._p  # Track the last paragraph element for insertion
             for alignment, group in segment_groups[1:]:
-                # Create new paragraph after current one
+                # Create new paragraph after the last one
                 new_p_el = OxmlElement("w:p")
-                paragraph._p.addnext(new_p_el)
+                last_p_el.addnext(new_p_el)
+                last_p_el = new_p_el  # Update to track the newly added paragraph
                 new_paragraph = Paragraph(new_p_el, paragraph._parent)
                 
                 # Set alignment for new paragraph

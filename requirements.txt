@@ -1,3 +1,4 @@
 python-docx>=1.0.0
+Pillow>=9.0.0
 pytest>=7.0.0
 pytest-cov>=4.0.0

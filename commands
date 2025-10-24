@@ -3,3 +3,13 @@ python3 main.py /mnt/c/Development/scripts/docx-templates/test/FTIR_Method_2_202
 
 python main.py "C:\Development\scripts\docx-templates\templates" -c replace.json --dry-run
 python main.py "C:\Development\scripts\docx-templates\test" -c replace.json --dry-run
+
+scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Report Templates\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180
+unzip /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip -d /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates
+rm /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+
+scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Notifications\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180
+unzip /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip -d /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates
+rm /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip

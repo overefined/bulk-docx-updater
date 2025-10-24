@@ -19,30 +19,38 @@ from src.config import (
 
 class TestConfigLoading:
     """Test cases for configuration loading functions."""
-    
-    def test_load_replacements_from_json_operations_format(self):
-        """Test loading replacements from JSON with 'operations' key."""
-        ops_data = {
-            "operations": [
-                {"op": "replace", "search": "old1", "replace": "new1"},
-                {"op": "replace", "search": "old2", "replace": "new2"}
-            ]
-        }
+
+    def test_load_replacements_from_json_array_format(self):
+        """Test loading replacements from JSON array format."""
+        ops_data = [
+            {"search": "old1", "replace": "new1"},
+            {"search": "old2", "replace": "new2"}
+        ]
         json_content = json.dumps(ops_data)
-        
+
         with patch("builtins.open", mock_open(read_data=json_content)):
             result = load_replacements_from_json(Path("test.json"))
-            
+
+            # Result is in internal replacements format (op field stripped)
             assert result == [
                 {"search": "old1", "replace": "new1"},
                 {"search": "old2", "replace": "new2"}
             ]
-    
-    def test_load_replacements_from_json_invalid_format(self):
-        """Test loading replacements from invalid JSON format (no 'operations')."""
+
+    def test_load_replacements_from_json_invalid_format_object(self):
+        """Test loading replacements from invalid JSON format (object instead of array)."""
+        json_data = {"operations": [{"search": "x", "replace": "y"}]}
+        json_content = json.dumps(json_data)
+
+        with patch("builtins.open", mock_open(read_data=json_content)):
+            with pytest.raises(SystemExit):
+                load_replacements_from_json(Path("test.json"))
+
+    def test_load_replacements_from_json_invalid_format_dict(self):
+        """Test loading replacements from invalid JSON format (random dict)."""
         json_data = {"replacements": [{"search": "x", "replace": "y"}]}
         json_content = json.dumps(json_data)
-        
+
         with patch("builtins.open", mock_open(read_data=json_content)):
             with pytest.raises(SystemExit):
                 load_replacements_from_json(Path("test.json"))
@@ -72,16 +80,42 @@ class TestConfigLoading:
     
     def test_load_replacements_from_json_utf8_encoding(self):
         """Test that JSON files are loaded with UTF-8 encoding."""
-        json_data = {"operations": [{"op": "replace", "search": "café", "replace": "coffee"}]}
+        json_data = [{"search": "café", "replace": "coffee"}]
         json_content = json.dumps(json_data, ensure_ascii=False)
-        
+
         mock_file = mock_open(read_data=json_content)
         with patch("builtins.open", mock_file):
             result = load_replacements_from_json(Path("test.json"))
-            
+
             # Verify UTF-8 encoding was used
             mock_file.assert_called_once_with(Path("test.json"), 'r', encoding='utf-8')
+            # Result is in internal replacements format (op field stripped)
             assert result == [{"search": "café", "replace": "coffee"}]
+
+    def test_load_replacements_simplified_format(self):
+        """Test loading replacements with simplified format (inferred operation types)."""
+        ops_data = [
+            {"search": "old", "replace": "new"},
+            {"search": "xml", "replace": "xml", "xml_mode": True},
+            {"cleanup_empty_after": "HEADER"},
+            {"replace_table_cell": {"row": 0, "column": 1, "replace": "text"}},
+            {"set_table_column_widths": {"column_widths": [1.5, 2.0]}},
+            {"table_header_repeat": {"pattern": "Header"}},
+            {"font_size": {"from": 8, "to": 10}}
+        ]
+        json_content = json.dumps(ops_data)
+
+        with patch("builtins.open", mock_open(read_data=json_content)):
+            result = load_replacements_from_json(Path("test.json"))
+
+            # Verify operations were converted to internal replacements format
+            assert result[0] == {"search": "old", "replace": "new"}
+            assert result[1] == {"search": "xml", "replace": "xml", "xml_mode": True}
+            assert result[2] == {"remove_empty_paragraphs_after": "HEADER"}
+            assert result[3] == {"replace_table_cell": {"row": 0, "column": 1, "replace": "text"}}
+            assert result[4] == {"set_table_column_widths": {"column_widths": [1.5, 2.0]}}
+            assert result[5] == {"set_table_header_repeat": {"pattern": "Header", "enabled": True}}
+            assert result[6] == {"change_font_size": {"from": 8, "to": 10}}
 
 
 class TestReplacementValidation:

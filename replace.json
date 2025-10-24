@@ -1,5 +1,3 @@
-{
-  "operations": [
-    { "op": "set_table_column_widths", "table_header": "Time, Phase, O2 %", "column_widths": [0.7, 0.6] }
-  ]
-}
+[
+  { "set_table_column_widths": { "table_header": "Time, Phase, O2 %", "column_widths": [0.7, 0.6] } }
+]

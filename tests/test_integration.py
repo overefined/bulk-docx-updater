@@ -41,13 +41,11 @@ class TestIntegrationWithRealDocuments:
         doc.save(self.test_docx)
         
         # Create test configuration
-        test_config = {
-            "operations": [
-                {"op": "replace", "search": "old text", "replace": "new content"},
-                {"op": "replace", "search": "test document", "replace": "sample document"}
-            ]
-        }
-        
+        test_config = [
+            {"search": "old text", "replace": "new content"},
+            {"search": "test document", "replace": "sample document"}
+        ]
+
         with open(self.config_file, 'w') as f:
             json.dump(test_config, f)
     

@@ -26,20 +26,16 @@ class TestParagraphBreakEndToEnd:
     
     def test_paragraphbreak_config_loading_and_validation(self):
         """Test that paragraph break configurations load and validate correctly."""
-        config_data = {
-            "operations": [
-                {
-                    "op": "replace",
-                    "search": "SITE PHOTOS",
-                    "replace": "SITE PHOTOSpagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"
-                },
-                {
-                    "op": "replace",
-                    "search": "TEST RESULTS",
-                    "replace": "Result1paragraphbreakResult2paragraphbreakResult3"
-                }
-            ]
-        }
+        config_data = [
+            {
+                "search": "SITE PHOTOS",
+                "replace": "SITE PHOTOSpagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"
+            },
+            {
+                "search": "TEST RESULTS",
+                "replace": "Result1paragraphbreakResult2paragraphbreakResult3"
+            }
+        ]
         
         # Write config file
         config_file = self.temp_dir / "test_config.json"

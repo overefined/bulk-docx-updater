@@ -13,28 +13,81 @@ import logging
 
 
 def load_operations_from_json(config_file: Path) -> List[Dict[str, Any]]:
-    """Load operations from a JSON configuration file."""
+    """Load operations from a JSON configuration file.
+
+    Format: [{"search": "old", "replace": "new"}, ...]
+    """
     try:
         with open(config_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        # Only support the new 'operations' schema
-        if not (isinstance(data, dict) and isinstance(data.get('operations'), list)):
-            raise ValueError("JSON must contain an 'operations' list")
+        # Only support array format
+        if not isinstance(data, list):
+            raise ValueError("JSON must be an array of operations")
 
-        operations: List[Dict[str, Any]] = data['operations']
+        operations: List[Dict[str, Any]] = data
 
         # Process file references for large XML content
         config_dir = config_file.parent
         for i, operation in enumerate(operations):
-            # Load file references and remove the file keys after loading
-            operations[i] = _process_file_references(operation, config_dir)
+            # Normalize and load file references
+            operations[i] = _normalize_operation(operation, config_dir)
 
         return operations
 
     except Exception as e:
         logging.getLogger(__name__).error("Error loading config file %s: %s", config_file, e)
         sys.exit(1)
+
+
+def _normalize_operation(operation: Dict, config_dir: Path) -> Dict:
+    """Normalize operation format and process file references.
+
+    Converts simplified format to normalized format with 'op' field:
+    - {"search": "x", "replace": "y"} -> {"op": "replace", "search": "x", "replace": "y"}
+    - {"replace_table_cell": {...}} -> {"op": "replace_table_cell", ...}
+    """
+    # If already has 'op' field, just process file references
+    if 'op' in operation:
+        return _process_file_references(operation, config_dir)
+
+    # Infer operation type from fields present
+    # Check for file references first (they need to be loaded before we can determine the op type)
+    if 'search_file' in operation or 'replace_file' in operation:
+        # Process file references first
+        operation = _process_file_references(operation, config_dir)
+        # After loading files, fall through to determine op type
+
+    if 'search' in operation and 'replace' in operation:
+        # Text replacement operation
+        op_type = 'xml_replace' if operation.get('xml_mode') else 'replace'
+        operation['op'] = op_type
+        return operation
+
+    # Single-key operation formats
+    single_key_ops = [
+        'replace_table_cell',
+        'set_table_column_widths',
+        'cleanup_empty_after',
+        'table_header_repeat',
+        'font_size'
+    ]
+
+    for op_name in single_key_ops:
+        if op_name in operation:
+            # Flatten: {"replace_table_cell": {...}} -> {"op": "replace_table_cell", ...}
+            op_config = operation[op_name]
+            if isinstance(op_config, dict):
+                normalized = {'op': op_name, **op_config}
+            elif isinstance(op_config, (str, bool, int, float)):
+                # Handle simple values like {"cleanup_empty_after": "HEADER"}
+                normalized = {'op': op_name, 'value': op_config}
+            else:
+                normalized = {'op': op_name}
+            return _process_file_references(normalized, config_dir)
+
+    # If we can't infer, return as-is and let validation catch it
+    return operation
 
 
 def _process_file_references(operation: Dict, config_dir: Path) -> Dict:
@@ -105,16 +158,33 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
 
         elif op_type == 'cleanup_empty_after':
             # Validate cleanup operation
-            if 'pattern' not in op:
-                logging.getLogger(__name__).error("Error: Operation %s: 'cleanup_empty_after' requires 'pattern' field", i)
+            # Support both {"op": "cleanup_empty_after", "pattern": "X"} and simplified {"cleanup_empty_after": "X"}
+            if 'pattern' not in op and 'value' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'cleanup_empty_after' requires 'pattern' or 'value' field", i)
                 sys.exit(1)
 
-            if not isinstance(op['pattern'], str):
+            pattern = op.get('pattern') or op.get('value')
+            if not isinstance(pattern, str):
                 logging.getLogger(__name__).error("Error: Operation %s: 'pattern' must be string", i)
                 sys.exit(1)
 
+            # Normalize to use 'pattern'
+            if 'value' in op:
+                op['pattern'] = op.pop('value')
+
         elif op_type == 'table_header_repeat':
             # Validate table header repeat operation
+            # Support {"table_header_repeat": true/false} or {"table_header_repeat": {"pattern": "X"}}
+            if 'value' in op:
+                # Simplified format: {"table_header_repeat": true} or {"table_header_repeat": {"pattern": "X"}}
+                value = op.pop('value')
+                if isinstance(value, bool):
+                    op['enabled'] = value
+                elif isinstance(value, dict):
+                    op.update(value)
+                elif isinstance(value, str):
+                    op['pattern'] = value
+
             if 'pattern' in op and not isinstance(op['pattern'], str):
                 logging.getLogger(__name__).error("Error: Operation %s: 'pattern' must be string", i)
                 sys.exit(1)
@@ -125,6 +195,10 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
 
         elif op_type == 'font_size':
             # Validate font size operation
+            # Support {"font_size": {"from": 8, "to": 10}}
+            if 'value' in op and isinstance(op['value'], dict):
+                op.update(op.pop('value'))
+
             if 'from' not in op or 'to' not in op:
                 logging.getLogger(__name__).error("Error: Operation %s: 'font_size' requires 'from' and 'to' fields", i)
                 sys.exit(1)

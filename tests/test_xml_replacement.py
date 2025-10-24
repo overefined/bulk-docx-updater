@@ -371,20 +371,17 @@ class TestXMLFileReferences:
 
             # Create config file
             config_file = temp_dir / "config.json"
-            config_data = {
-                "operations": [
-                    {
-                        "op": "xml_replace",
-                        "search_file": "search_pattern.xml",
-                        "replace_file": "replace_pattern.xml"
-                    },
-                    {
-                        "op": "replace",
-                        "search": "regular text",
-                        "replace": "replacement text"
-                    }
-                ]
-            }
+            config_data = [
+                {
+                    "search_file": "search_pattern.xml",
+                    "replace_file": "replace_pattern.xml",
+                    "xml_mode": True
+                },
+                {
+                    "search": "regular text",
+                    "replace": "replacement text"
+                }
+            ]
 
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f)

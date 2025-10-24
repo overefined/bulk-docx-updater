@@ -390,26 +390,26 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Create config file
-        config_content = """{
-  "operations": [
-    {
-      "op": "replace_table_cell",
+        config_content = """[
+  {
+    "replace_table_cell": {
       "table_index": 0,
       "row": 0,
       "column": 0,
       "search": "Phase",
       "replace": "{format:left}Time{/format}"
-    },
-    {
-      "op": "replace_table_cell",
+    }
+  },
+  {
+    "replace_table_cell": {
       "table_index": 0,
       "row": 0,
       "column": 1,
       "search": "Time",
       "replace": "{format:left}Phase{/format}"
     }
-  ]
-}"""
+  }
+]"""
 
         config_file = tmp_path / "test_config.json"
         config_file.write_text(config_content)

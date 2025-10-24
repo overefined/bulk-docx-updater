@@ -95,3 +95,55 @@ Supported operations
 ```json
 { "op": "cleanup_empty_after", "pattern": "SOME HEADER" }
 ```
+
+## Inline Formatting
+
+Use `{format:options}text{/format}` syntax within replacement text to apply formatting.
+
+### Available Format Options
+
+**Text Styling:**
+- `bold` - Bold text
+- `italic` - Italic text
+- `underline` - Underlined text
+
+**Font Size:**
+- `size8`, `size10`, `size12`, `size14`, `size16`, `size18`, etc. - Font size in points
+
+**Alignment:**
+- `left` - Left align
+- `center` - Center align
+- `right` - Right align
+- `justify` - Justified alignment
+
+**Spacing:**
+- `spacing0`, `spacing6`, `spacing12`, `spacing18`, `spacing24` - Line spacing in points (before paragraph)
+
+**Combining Options:**
+Use commas to combine multiple options:
+
+```json
+{
+  "op": "replace",
+  "search": "Title",
+  "replace": "{format:bold,center,size16}New Title{/format}"
+}
+```
+
+### Global Formatting Tokens
+
+Insert these directly in replacement text (outside `{format}` blocks):
+
+- `pagebreak` - Insert page break
+- `linebreak` - Insert line break
+- `paragraphbreak` - Insert paragraph break
+
+Example:
+
+```json
+{
+  "op": "replace",
+  "search": "PHOTOS",
+  "replace": "Photo1paragraphbreakPhoto2paragraphbreakPhoto3"
+}
+```

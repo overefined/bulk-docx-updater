@@ -13,7 +13,7 @@ import json
 from docx import Document
 
 from document_processor import DocxBulkUpdater
-from config import load_replacements_from_json
+from config import load_operations_from_json
 
 
 class TestRealTemplateProcessing:
@@ -48,10 +48,10 @@ class TestRealTemplateProcessing:
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
         # Use the actual replacement from replace.json
-        replacements = [
-            {"search": "SITE PHOTOS", "replace": "SITE PHOTOSTEST_CONTENT_INSERTED"}
+        operations = [
+            {"op": "replace", "search": "SITE PHOTOS", "replace": "SITE PHOTOSTEST_CONTENT_INSERTED"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run first to verify behavior
         changes = updater.get_document_changes_preview(template_path)
@@ -77,13 +77,13 @@ class TestRealTemplateProcessing:
         """Test TESTER QUALIFICATIONS replacement with formatting."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
+        operations = [
             {
                 "search": "TESTER QUALIFICATIONS",
                 "replace": "{format:center,bold,size16}TESTER QUALIFICATIONS{/format}pagebreak{format:center,size12}{{ technician_resume }}{/format}"
             }
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run first
         changes = updater.get_document_changes_preview(template_path)
@@ -102,10 +102,10 @@ class TestRealTemplateProcessing:
         """Test removing bracketed text like ' (0.84)'."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
-            {"search": " (0.84)", "replace": ""}
+        operations = [
+            {"op": "replace", "search": " (0.84)", "replace": ""}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run first
         changes = updater.get_document_changes_preview(template_path)
@@ -124,7 +124,7 @@ class TestRealTemplateProcessing:
         """Test the remove_empty_paragraphs_after functionality."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
+        operations = [
             {
                 "search": "TESTER QUALIFICATIONS",
                 "replace": "{format:center,bold,size16}TESTER QUALIFICATIONS{/format}pagebreak{format:center,size12}{{ technician_resume }}{/format}"
@@ -133,7 +133,7 @@ class TestRealTemplateProcessing:
                 "remove_empty_paragraphs_after": "{{ technician_resume }}"
             }
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Apply changes
         result = updater.modify_docx(template_path)
@@ -145,11 +145,11 @@ class TestRealTemplateProcessing:
         """Test processing FTIR template with common replacements."""
         template_path = self.copy_template("FTIR_1x21min_20240619.docx")
         
-        replacements = [
-            {"search": "old_placeholder", "replace": "new_value"},
-            {"search": "test_data", "replace": "production_data"}
+        operations = [
+            {"op": "replace", "search": "old_placeholder", "replace": "new_value"},
+            {"op": "replace", "search": "test_data", "replace": "production_data"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run
         changes = updater.get_document_changes_preview(template_path)
@@ -164,9 +164,9 @@ class TestRealTemplateProcessing:
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
         custom_margins = {'top': 0.75, 'bottom': 0.75, 'left': 1.0, 'right': 1.0}
-        replacements = []  # No text replacements
+        operations = []  # No text replacements
         updater = DocxBulkUpdater(
-            replacements,
+            operations,
             standardize_margins=True,
             margins=custom_margins
         )
@@ -185,13 +185,13 @@ class TestRealTemplateProcessing:
         """Test complex formatting tokens on actual template."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
+        operations = [
             {
                 "search": "Test Report",
                 "replace": "{format:center,bold,size18}ENHANCED TEST REPORT{/format}linebreak{format:italic}Modified by Bulk Updater{/format}"
             }
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run first
         changes = updater.get_document_changes_preview(template_path)
@@ -204,11 +204,11 @@ class TestRealTemplateProcessing:
         """Test table content replacement on real template."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
-            {"search": "Table", "replace": "Modified Table"},
-            {"search": "Cell", "replace": "Updated Cell"}
+        operations = [
+            {"op": "replace", "search": "Table", "replace": "Modified Table"},
+            {"op": "replace", "search": "Cell", "replace": "Updated Cell"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Apply changes
         result = updater.modify_docx(template_path)
@@ -234,10 +234,10 @@ class TestRealTemplateProcessing:
         if not copied_templates:
             pytest.skip("No templates available for batch testing")
         
-        replacements = [
-            {"search": "test_value", "replace": "production_value"}
+        operations = [
+            {"op": "replace", "search": "test_value", "replace": "production_value"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         results = []
         for template_path in copied_templates:
@@ -253,11 +253,11 @@ class TestRealTemplateProcessing:
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
         # Look for text that might be split across runs
-        replacements = [
-            {"search": "test", "replace": "REPLACEMENT"},  # Common word likely to be split
-            {"search": "data", "replace": "INFORMATION"}
+        operations = [
+            {"op": "replace", "search": "test", "replace": "REPLACEMENT"},  # Common word likely to be split
+            {"op": "replace", "search": "data", "replace": "INFORMATION"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run to see what would be changed
         changes = updater.get_document_changes_preview(template_path)
@@ -300,8 +300,8 @@ class TestConfigurationWithRealTemplates:
         if not config_path.exists():
             pytest.skip("replace.json not found")
         
-        replacements = load_replacements_from_json(config_path)
-        updater = DocxBulkUpdater(replacements)
+        operations = load_operations_from_json(config_path)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run
         changes = updater.get_document_changes_preview(template_path)
@@ -328,10 +328,10 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
         """Test dry run preview without modifying documents."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
-            {"search": "Test", "replace": "Analysis"}
+        operations = [
+            {"op": "replace", "search": "Test", "replace": "Analysis"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Get original content
         original_doc = Document(template_path)
@@ -352,10 +352,10 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
         """Test behavior when no replacements are found."""
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
-        replacements = [
-            {"search": "NONEXISTENT_TEXT_12345", "replace": "REPLACEMENT"}
+        operations = [
+            {"op": "replace", "search": "NONEXISTENT_TEXT_12345", "replace": "REPLACEMENT"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Should return False when no changes are made
         result = updater.modify_docx(template_path)
@@ -366,10 +366,10 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
         template_path = self.copy_template("ECOM_1x21min_20250510.docx")
         
         # Many DOCX templates have standard headers/footers
-        replacements = [
-            {"search": "Page", "replace": "Sheet"}  # Common in headers/footers
+        operations = [
+            {"op": "replace", "search": "Page", "replace": "Sheet"}  # Common in headers/footers
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test dry run to see if headers/footers have matches
         changes = updater.get_document_changes_preview(template_path)
@@ -388,8 +388,8 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
         with open(fake_docx, 'w') as f:
             f.write("This is not a DOCX file")
         
-        replacements = [{"search": "test", "replace": "example"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "test", "replace": "example"}]
+        updater = DocxBulkUpdater(operations)
         
         # Should handle the error gracefully and return False
         result = updater.modify_docx(fake_docx)

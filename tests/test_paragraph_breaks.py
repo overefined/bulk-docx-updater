@@ -58,28 +58,30 @@ class TestParagraphBreakEndToEnd:
     
     def test_docx_bulk_updater_with_paragraphbreaks(self):
         """Test DocxBulkUpdater initialization with paragraph break replacements."""
-        replacements = [
+        operations = [
             {
+                "op": "replace",
                 "search": "PHOTOS",
                 "replace": "Photo1paragraphbreakPhoto2"
             }
         ]
         
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         assert updater.text_replacer is not None
-        assert updater.text_replacer.replacements == replacements
+        assert updater.text_replacer.operations == operations
         assert updater.text_replacer.formatter is not None
     
     def test_paragraph_break_token_processing_integration(self):
         """Test integration between text replacement and formatting for paragraph breaks."""
-        replacements = [
+        operations = [
             {
+                "op": "replace",
                 "search": "PHOTOS",
                 "replace": "Photo1paragraphbreakPhoto2paragraphbreakPhoto3"
             }
         ]
         
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test text replacement
         original_text = "SITE PHOTOS content"
@@ -103,14 +105,15 @@ class TestParagraphBreakEndToEnd:
     
     def test_multiple_break_types_integration(self):
         """Test integration of multiple break types (paragraph, line, page)."""
-        replacements = [
+        operations = [
             {
+                "op": "replace",
                 "search": "CONTENT",
                 "replace": "Line1linebreakLine2paragraphbreakPage1pagebreakPage2"
             }
         ]
         
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test text replacement
         original_text = "TEST CONTENT here"
@@ -139,14 +142,15 @@ class TestParagraphBreakEndToEnd:
     
     def test_paragraph_breaks_with_inline_formatting_integration(self):
         """Test paragraph breaks combined with inline formatting in full pipeline."""
-        replacements = [
+        operations = [
             {
+                "op": "replace",
                 "search": "PHOTOS",
                 "replace": "{format:center,bold,size14}Photo1paragraphbreakPhoto2{/format}paragraphbreakPhoto3"
             }
         ]
         
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test text replacement
         original_text = "SITE PHOTOS section"
@@ -184,8 +188,8 @@ class TestParagraphBreakEndToEnd:
     def test_configuration_edge_cases(self):
         """Test edge cases in configuration handling."""
         # Test empty paragraph break
-        replacements = [{"search": "TEST", "replace": "contentparagraphbreak"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "TEST", "replace": "contentparagraphbreak"}]
+        updater = DocxBulkUpdater(operations)
         
         text = "This is TEST content"
         new_text, modified = updater.text_replacer.apply_text_replacements(text)
@@ -204,14 +208,15 @@ class TestParagraphBreakEndToEnd:
     
     def test_jinja_template_with_paragraphbreaks(self):
         """Test configuration that matches actual use case with Jinja templates."""
-        replacements = [
+        operations = [
             {
+                "op": "replace",
                 "search": "SITE PHOTOS",
                 "replace": "pagebreak{format:center,size12}{% if ecom_photos != none %}{% for site_photo in ecom_photos.site_photos %}{{ site_photo }}paragraphbreak{% endfor %}{% endif %}{/format}"
             }
         ]
         
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         # Test the Jinja template content processing
         text = "APPENDIX H	SITE PHOTOS"

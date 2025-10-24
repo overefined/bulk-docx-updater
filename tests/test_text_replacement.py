@@ -14,27 +14,28 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 class TestTextReplacer:
     """Test cases for TextReplacer class."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.formatter = FormattingProcessor()
-        self.replacements = [
-            {"search": "old text", "replace": "new text"},
-            {"search": "TESTER QUALIFICATIONS", "replace": "INSPECTOR QUALIFICATIONS"}
+        self.operations = [
+            {"op": "replace", "search": "old text", "replace": "new text"},
+            {"op": "replace", "search": "TESTER QUALIFICATIONS", "replace": "INSPECTOR QUALIFICATIONS"}
         ]
-    
+
     def test_init(self):
         """Test TextReplacer initialization."""
-        text_replacer = TextReplacer(self.replacements, self.formatter)
-        
-        assert text_replacer.replacements == self.replacements
+        text_replacer = TextReplacer(self.operations, self.formatter)
+
+        # TextReplacer filters to only keep replace/xml_replace operations
+        assert len(text_replacer.operations) == 2
         assert text_replacer.formatter == self.formatter
-    
+
     def test_init_with_empty_replacements(self):
-        """Test TextReplacer initialization with empty replacements."""
+        """Test TextReplacer initialization with empty operations."""
         text_replacer = TextReplacer([], self.formatter)
-        
-        assert text_replacer.replacements == []
+
+        assert text_replacer.operations == []
         assert text_replacer.formatter == self.formatter
 
 
@@ -47,8 +48,8 @@ class TestTextReplacementFunctionality:
     
     def test_apply_text_replacements_simple(self):
         """Test simple text replacement."""
-        replacements = [{"search": "old", "replace": "new"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "old", "replace": "new"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("This is old text")
         assert modified is True
@@ -56,8 +57,8 @@ class TestTextReplacementFunctionality:
     
     def test_apply_text_replacements_no_match(self):
         """Test text replacement with no matches."""
-        replacements = [{"search": "missing", "replace": "new"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "missing", "replace": "new"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("This is old text")
         assert modified is False
@@ -65,8 +66,8 @@ class TestTextReplacementFunctionality:
     
     def test_apply_text_replacements_with_paragraphbreak(self):
         """Test text replacement with paragraph breaks."""
-        replacements = [{"search": "PHOTOS", "replace": "Photo1paragraphbreakPhoto2"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "PHOTOS", "replace": "Photo1paragraphbreakPhoto2"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("SITE PHOTOS section")
         assert modified is True
@@ -74,8 +75,8 @@ class TestTextReplacementFunctionality:
     
     def test_apply_text_replacements_append_after(self):
         """Test appending content using replace."""
-        replacements = [{"search": "PHOTOS", "replace": "PHOTOS\nPhoto1paragraphbreakPhoto2"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "PHOTOS", "replace": "PHOTOS\nPhoto1paragraphbreakPhoto2"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("SITE PHOTOS section")
         assert modified is True
@@ -83,11 +84,11 @@ class TestTextReplacementFunctionality:
     
     def test_apply_text_replacements_multiple_replacements(self):
         """Test multiple replacements in order."""
-        replacements = [
-            {"search": "old", "replace": "new"},
-            {"search": "bad", "replace": "good"}
+        operations = [
+            {"op": "replace", "search": "old", "replace": "new"},
+            {"op": "replace", "search": "bad", "replace": "good"}
         ]
-        replacer = TextReplacer(replacements, self.formatter)
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("This old thing is bad")
         assert modified is True
@@ -95,20 +96,20 @@ class TestTextReplacementFunctionality:
     
     def test_apply_text_replacements_all_occurrences(self):
         """Test that all occurrences are replaced."""
-        replacements = [{"search": "test", "replace": "example"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "test", "replace": "example"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("This test has test twice")
         assert modified is True
         assert result == "This example has example twice"
     
     def test_apply_text_replacements_skip_cleanup_operations(self):
-        """Test that cleanup operations (remove_empty_paragraphs_after) are skipped."""
-        replacements = [
-            {"search": "old", "replace": "new"},
-            {"remove_empty_paragraphs_after": "SITE PHOTOS"}  # This should be skipped
+        """Test that cleanup operations (cleanup_empty_after) are filtered out."""
+        operations = [
+            {"op": "replace", "search": "old", "replace": "new"},
+            {"op": "cleanup_empty_after", "pattern": "SITE PHOTOS"}  # This should be filtered
         ]
-        replacer = TextReplacer(replacements, self.formatter)
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("This is old text")
         assert modified is True
@@ -116,12 +117,12 @@ class TestTextReplacementFunctionality:
         # The cleanup operation should not affect text replacement
     
     def test_apply_text_replacements_skip_replacements_without_search(self):
-        """Test that replacements without search field are skipped."""
-        replacements = [
-            {"search": "old", "replace": "new"},
-            {"remove_empty_paragraphs_after": True}  # No search field
+        """Test that operations without op=replace are filtered out."""
+        operations = [
+            {"op": "replace", "search": "old", "replace": "new"},
+            {"op": "table_header_repeat", "pattern": "Header"}  # Should be filtered
         ]
-        replacer = TextReplacer(replacements, self.formatter)
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("This is old text")
         assert modified is True
@@ -134,8 +135,8 @@ class TestHyperlinkDetection:
     def setup_method(self):
         """Set up test fixtures."""
         self.formatter = FormattingProcessor()
-        self.replacements = [{"search": "SITE PHOTOS", "replace": "Updated Photos"}]
-        self.replacer = TextReplacer(self.replacements, self.formatter)
+        self.operations = [{"op": "replace", "search": "SITE PHOTOS", "replace": "Updated Photos"}]
+        self.replacer = TextReplacer(self.operations, self.formatter)
         self.doc = Document()
     
     def create_paragraph_with_hyperlink(self, text: str) -> object:
@@ -193,8 +194,8 @@ class TestTextReplacementWithHyperlinkSkipping:
     
     def test_apply_text_replacements_works_without_paragraph_context(self):
         """Test that text replacement works when no paragraph context is provided."""
-        replacements = [{"search": "SITE PHOTOS", "replace": "Updated Photos"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "SITE PHOTOS", "replace": "Updated Photos"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         # No paragraph context means no hyperlink detection
         result, modified = replacer.apply_text_replacements("SITE PHOTOS", None)
@@ -213,11 +214,11 @@ class TestTextReplacementWithDocx:
     
     def test_append_after_with_paragraphbreaks(self):
         """Test append-after via replace with paragraph breaks using string processing."""
-        # Set up replacements with paragraph breaks
-        replacements = [
-            {"search": "PHOTOS", "replace": "PHOTOSPhoto1paragraphbreakPhoto2paragraphbreakPhoto3"}
+        # Set up operations with paragraph breaks
+        operations = [
+            {"op": "replace", "search": "PHOTOS", "replace": "PHOTOSPhoto1paragraphbreakPhoto2paragraphbreakPhoto3"}
         ]
-        replacer = TextReplacer(replacements, self.formatter)
+        replacer = TextReplacer(operations, self.formatter)
         
         # Test the core text replacement logic
         test_text = "SITE PHOTOS content"
@@ -235,8 +236,8 @@ class TestTextReplacementWithDocx:
     
     def test_append_after_no_match(self):
         """Test append-after via replace with no matching text."""
-        replacements = [{"search": "MISSING", "replace": "MISSINGnew content"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "MISSING", "replace": "MISSINGnew content"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         result, modified = replacer.apply_text_replacements("SITE PHOTOS content")
         assert modified is False
@@ -263,8 +264,8 @@ class TestTextReplacementWithDocx:
     
     def test_hyperlink_detection_helper(self):
         """Test hyperlink detection helper returns True when match is in hyperlink."""
-        replacements = [{"search": "PHOTOS", "replace": "PHOTOS new content"}]
-        replacer = TextReplacer(replacements, self.formatter)
+        operations = [{"op": "replace", "search": "PHOTOS", "replace": "PHOTOS new content"}]
+        replacer = TextReplacer(operations, self.formatter)
         
         # Create paragraph with hyperlink using our helper
         paragraph = self.create_paragraph_with_hyperlink("APPENDIX H    SITE PHOTOS")
@@ -283,10 +284,10 @@ class TestParagraphBreakIntegration:
     
     def test_paragraphbreak_processing_pipeline(self):
         """Test complete pipeline from text replacement to formatting segments."""
-        replacements = [
-            {"search": "PHOTOS", "replace": "Photo1paragraphbreakPhoto2paragraphbreakPhoto3"}
+        operations = [
+            {"op": "replace", "search": "PHOTOS", "replace": "Photo1paragraphbreakPhoto2paragraphbreakPhoto3"}
         ]
-        replacer = TextReplacer(replacements, self.formatter)
+        replacer = TextReplacer(operations, self.formatter)
         
         # Apply replacement
         text = "SITE PHOTOS section"
@@ -317,10 +318,10 @@ class TestParagraphBreakIntegration:
     
     def test_paragraphbreak_with_inline_formatting_integration(self):
         """Test paragraph breaks combined with inline formatting."""
-        replacements = [
-            {"search": "PHOTOS", "replace": "{format:center,size12}Photo1paragraphbreakPhoto2{/format}"}
+        operations = [
+            {"op": "replace", "search": "PHOTOS", "replace": "{format:center,size12}Photo1paragraphbreakPhoto2{/format}"}
         ]
-        replacer = TextReplacer(replacements, self.formatter)
+        replacer = TextReplacer(operations, self.formatter)
         
         # Apply replacement
         text = "SITE PHOTOS section"

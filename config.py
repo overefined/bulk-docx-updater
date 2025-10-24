@@ -234,6 +234,16 @@ def parse_margin_settings(args) -> Dict[str, float]:
             logging.getLogger(__name__).error("Error parsing margin settings: %s", e)
             sys.exit(1)
 
+    # Apply individual margin overrides
+    if hasattr(args, 'margin_top') and args.margin_top is not None:
+        margins['top'] = args.margin_top
+    if hasattr(args, 'margin_bottom') and args.margin_bottom is not None:
+        margins['bottom'] = args.margin_bottom
+    if hasattr(args, 'margin_left') and args.margin_left is not None:
+        margins['left'] = args.margin_left
+    if hasattr(args, 'margin_right') and args.margin_right is not None:
+        margins['right'] = args.margin_right
+
     return margins
 
 

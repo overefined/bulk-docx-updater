@@ -14,7 +14,7 @@ from docx import Document
 from docx.shared import Inches
 
 from document_processor import DocxBulkUpdater
-from config import load_replacements_from_json
+from config import load_operations_from_json
 
 
 class TestIntegrationWithRealDocuments:
@@ -57,8 +57,8 @@ class TestIntegrationWithRealDocuments:
     
     def test_document_modification_with_config_file(self):
         """Test document modification using configuration file."""
-        replacements = load_replacements_from_json(self.config_file)
-        updater = DocxBulkUpdater(replacements)
+        operations = load_operations_from_json(self.config_file)
+        updater = DocxBulkUpdater(operations)
         
         # Verify document was modified
         result = updater.modify_docx(self.test_docx)
@@ -73,8 +73,8 @@ class TestIntegrationWithRealDocuments:
     
     def test_document_modification_preserves_structure(self):
         """Test that document structure is preserved during modification."""
-        replacements = [{"search": "old text", "replace": "new content"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "old text", "replace": "new content"}]
+        updater = DocxBulkUpdater(operations)
         
         # Get original structure
         original_doc = Document(self.test_docx)
@@ -104,8 +104,8 @@ class TestIntegrationWithRealDocuments:
         doc.save(formatted_docx)
         
         # Apply replacement
-        replacements = [{"search": "old text", "replace": "new content"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "old text", "replace": "new content"}]
+        updater = DocxBulkUpdater(operations)
         updater.modify_docx(formatted_docx)
         
         # Verify text was changed
@@ -116,8 +116,8 @@ class TestIntegrationWithRealDocuments:
     
     def test_table_content_replacement(self):
         """Test that table content is properly replaced."""
-        replacements = [{"search": "Cell with old text", "replace": "Cell with new content"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "Cell with old text", "replace": "Cell with new content"}]
+        updater = DocxBulkUpdater(operations)
         
         result = updater.modify_docx(self.test_docx)
         assert result is True
@@ -131,9 +131,9 @@ class TestIntegrationWithRealDocuments:
     def test_margin_standardization(self):
         """Test document margin standardization."""
         custom_margins = {'top': 0.5, 'bottom': 1.5, 'left': 0.75, 'right': 1.25}
-        replacements = []  # No text replacements
+        operations = []  # No text replacements
         updater = DocxBulkUpdater(
-            replacements,
+            operations,
             standardize_margins=True,
             margins=custom_margins
         )
@@ -155,8 +155,8 @@ class TestIntegrationWithRealDocuments:
         original_doc = Document(self.test_docx)
         original_content = [para.text for para in original_doc.paragraphs]
         
-        replacements = [{"search": "old text", "replace": "new content"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "old text", "replace": "new content"}]
+        updater = DocxBulkUpdater(operations)
         
         # Get preview of changes
         changes = updater.get_document_changes_preview(self.test_docx)
@@ -177,8 +177,8 @@ class TestIntegrationWithRealDocuments:
         doc2.add_paragraph("Second document with old text content.")
         doc2.save(test_docx2)
         
-        replacements = [{"search": "old text", "replace": "new content"}]
-        updater = DocxBulkUpdater(replacements)
+        operations = [{"op": "replace", "search": "old text", "replace": "new content"}]
+        updater = DocxBulkUpdater(operations)
         
         # Process both documents
         result1 = updater.modify_docx(self.test_docx)
@@ -205,7 +205,7 @@ class TestErrorHandling:
         nonexistent_config = Path("nonexistent_config.json")
         
         with pytest.raises(SystemExit):
-            load_replacements_from_json(nonexistent_config)
+            load_operations_from_json(nonexistent_config)
     
     def test_corrupted_docx_file(self):
         """Test handling of corrupted DOCX files."""
@@ -215,8 +215,8 @@ class TestErrorHandling:
             f.write("This is not a valid DOCX file")
         
         try:
-            replacements = [{"search": "test", "replace": "example"}]
-            updater = DocxBulkUpdater(replacements)
+            operations = [{"op": "replace", "search": "test", "replace": "example"}]
+            updater = DocxBulkUpdater(operations)
             
             # Should return False (failed to process)
             result = updater.modify_docx(corrupted_file)
@@ -243,8 +243,8 @@ class TestErrorHandling:
         
         try:
             # Should handle empty directory gracefully
-            replacements = [{"search": "test", "replace": "example"}]
-            updater = DocxBulkUpdater(replacements)
+            operations = [{"op": "replace", "search": "test", "replace": "example"}]
+            updater = DocxBulkUpdater(operations)
             
             # Process directory (should find no files)
             files = list(empty_dir.glob("*.docx"))
@@ -277,10 +277,10 @@ class TestComplexFormattingIntegration:
     
     def test_formatting_token_processing(self):
         """Test processing of formatting tokens in replacement text."""
-        replacements = [
-            {"search": "bold formatting", "replace": "{format:italic,size14}italic formatted{/format}"}
+        operations = [
+            {"op": "replace", "search": "bold formatting", "replace": "{format:italic,size14}italic formatted{/format}"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         result = updater.modify_docx(self.test_docx)
         assert result is True
@@ -293,10 +293,10 @@ class TestComplexFormattingIntegration:
     
     def test_global_formatting_tokens(self):
         """Test processing of global formatting tokens."""
-        replacements = [
-            {"search": "Text with", "replace": "New text linebreak with"}
+        operations = [
+            {"op": "replace", "search": "Text with", "replace": "New text linebreak with"}
         ]
-        updater = DocxBulkUpdater(replacements)
+        updater = DocxBulkUpdater(operations)
         
         result = updater.modify_docx(self.test_docx)
         assert result is True

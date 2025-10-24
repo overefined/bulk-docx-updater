@@ -10,7 +10,7 @@ from pathlib import Path
 
 from text_replacement import TextReplacer
 from formatting import FormattingProcessor
-from config import validate_replacements, load_replacements_from_json, _process_file_references
+from config import validate_replacements, validate_operations, load_operations_from_json, _process_file_references
 
 
 class TestXMLReplacementConfig:
@@ -18,8 +18,9 @@ class TestXMLReplacementConfig:
 
     def test_xml_mode_boolean_validation(self):
         """Test that xml_mode must be a boolean."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "test",
                 "replace": "result",
                 "xml_mode": "true"  # Should be boolean, not string
@@ -27,40 +28,42 @@ class TestXMLReplacementConfig:
         ]
 
         with pytest.raises(SystemExit):
-            validate_replacements(replacements)
+            validate_replacements(operations)
 
     def test_xml_mode_requires_search_replace(self):
         """Test that xml_mode can only be used with search/replace operations."""
-        replacements = [
+        operations = [
             {
                 "xml_mode": True  # Should fail - requires search and replace
             }
         ]
 
         with pytest.raises(SystemExit):
-            validate_replacements(replacements)
+            validate_replacements(operations)
 
     def test_valid_xml_mode_config(self):
         """Test valid XML mode configuration (inline XML allowed by validator)."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "<w:t>old</w:t>",
-                "replace": "<w:t>new</w:t>",
-                "xml_mode": True
+                "replace": "<w:t>new</w:t>"
             },
             {
+                "op": "xml_replace",
                 "search": "normal text",
                 "replace": "new text"
             }
         ]
 
         # Should not raise any exceptions
-        validate_replacements(replacements)
+        validate_replacements(operations)
 
     def test_regex_validation(self):
         """Test regex option validation."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "test",
                 "replace": "result",
                 "regex": "true"  # Should be boolean
@@ -68,7 +71,7 @@ class TestXMLReplacementConfig:
         ]
 
         with pytest.raises(SystemExit):
-            validate_replacements(replacements)
+            validate_replacements(operations)
 
 
 class TestXMLReplacement:
@@ -81,19 +84,20 @@ class TestXMLReplacement:
 
     def test_xml_mode_filtering(self):
         """Test that XML mode replacements are filtered from regular text processing."""
-        replacements = [
+        operations = [
             {
+                "op": "replace",
                 "search": "text_search",
                 "replace": "text_replace"
             },
             {
+                "op": "xml_replace",
                 "search": "<w:t>xml_search</w:t>",
-                "replace": "<w:t>xml_replace</w:t>",
-                "xml_mode": True
+                "replace": "<w:t>xml_replace</w:t>"
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         # Test regular text replacement - should not process XML mode replacements
         result, modified = replacer.apply_text_replacements("text_search and <w:t>xml_search</w:t>")
@@ -105,15 +109,15 @@ class TestXMLReplacement:
 
     def test_xml_replacement_basic(self):
         """Test basic XML replacement functionality."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "<w:t>old</w:t>",
-                "replace": "<w:t>new</w:t>",
-                "xml_mode": True
+                "replace": "<w:t>new</w:t>"
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         # Create mock paragraph with proper namespace XML
         mock_paragraph = Mock()
@@ -137,15 +141,15 @@ class TestXMLReplacement:
 
     def test_xml_replacement_literal_attribute(self):
         """Test XML replacement with literal attribute patterns (no regex)."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": 'w:val="240"',
-                "replace": 'w:val="new_value"',
-                "xml_mode": True
+                "replace": 'w:val="new_value"'
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         mock_paragraph = Mock()
         mock_p_element = Mock()
@@ -161,15 +165,15 @@ class TestXMLReplacement:
 
     def test_xml_replacement_literal_case_sensitive(self):
         """Test XML replacement with exact literal casing (no ignore_case)."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "<w:t>test</w:t>",
-                "replace": "<w:t>replaced</w:t>",
-                "xml_mode": True
+                "replace": "<w:t>replaced</w:t>"
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         mock_paragraph = Mock()
         mock_p_element = Mock()
@@ -185,15 +189,16 @@ class TestXMLReplacement:
 
     def test_xml_replacement_malformed_handling(self):
         """Test that malformed XML replacements are rejected."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "<w:t>",
                 "replace": "malformed",  # This would break XML structure
                 "xml_mode": True
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         # Create mock paragraph
         mock_paragraph = Mock()
@@ -209,15 +214,15 @@ class TestXMLReplacement:
 
     def test_xml_replacement_no_matches(self):
         """Test XML replacement when no patterns match."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "<w:nonexistent>",
-                "replace": "<w:replacement>",
-                "xml_mode": True
+                "replace": "<w:replacement>"
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         # Create mock paragraph
         mock_paragraph = Mock()
@@ -242,19 +247,20 @@ class TestXMLReplacementIntegration:
 
     def test_xml_replacement_precedence(self):
         """Test that XML replacements take precedence over text replacements."""
-        replacements = [
+        operations = [
             {
+                "op": "xml_replace",
                 "search": "content",
                 "replace": "text_replaced"
             },
             {
+                "op": "xml_replace",
                 "search": "<w:t>content</w:t>",
-                "replace": "<w:t>xml_replaced</w:t>",
-                "xml_mode": True
+                "replace": "<w:t>xml_replaced</w:t>"
             }
         ]
 
-        replacer = TextReplacer(replacements, self.formatting_processor)
+        replacer = TextReplacer(operations, self.formatting_processor)
 
         # Create mock paragraph with proper XML namespace
         mock_paragraph = Mock()
@@ -304,8 +310,7 @@ class TestXMLFileReferences:
             # Test processing file references
             replacement = {
                 "search_file": "search.xml",
-                "replace_file": "replace.xml",
-                "xml_mode": True
+                "replace_file": "replace.xml"
             }
 
             result = _process_file_references(replacement, temp_dir)
@@ -316,7 +321,6 @@ class TestXMLFileReferences:
             assert result["replace"] == replace_content
             assert "search_file" not in result
             assert "replace_file" not in result
-            assert result["xml_mode"] is True
 
     def test_process_file_references_mixed_file_and_direct(self):
         """Test mixing file references and direct content."""
@@ -331,8 +335,7 @@ class TestXMLFileReferences:
             # Test mixing file reference with direct content
             replacement = {
                 "search_file": "search.xml",
-                "replace": "<w:t>direct content</w:t>",
-                "xml_mode": True
+                "replace": "<w:t>direct content</w:t>"
             }
 
             result = _process_file_references(replacement, temp_dir)
@@ -387,7 +390,7 @@ class TestXMLFileReferences:
                 json.dump(config_data, f)
 
             # Load and test
-            replacements = load_replacements_from_json(config_file)
+            replacements = load_operations_from_json(config_file)
 
             assert len(replacements) == 2
 
@@ -395,7 +398,7 @@ class TestXMLFileReferences:
             xml_replacement = replacements[0]
             assert "search" in xml_replacement
             assert "replace" in xml_replacement
-            assert xml_replacement["xml_mode"] is True
+            assert xml_replacement["op"] == "xml_replace"
             assert "Large XML block with" in xml_replacement["search"]
             assert "REPLACED XML with" in xml_replacement["replace"]
             assert "search_file" not in xml_replacement
@@ -409,28 +412,28 @@ class TestXMLFileReferences:
     def test_file_reference_validation(self):
         """Test validation of file-based replacement configurations."""
         # Valid file-based config
-        valid_replacements = [
+        valid_operations = [
             {
+                "op": "xml_replace",
                 "search_file": "search.xml",
-                "replace_file": "replace.xml",
-                "xml_mode": True
+                "replace_file": "replace.xml"
             }
         ]
 
         # Should not raise any exceptions
-        validate_replacements(valid_replacements)
+        validate_operations(valid_operations)
 
         # Mixed file/direct config
-        mixed_replacements = [
+        mixed_operations = [
             {
+                "op": "xml_replace",
                 "search_file": "search.xml",
-                "replace": "direct replacement",
-                "xml_mode": True
+                "replace": "direct replacement"
             }
         ]
 
         # Should not raise any exceptions
-        validate_replacements(mixed_replacements)
+        validate_operations(mixed_operations)
 
     def test_file_not_found_error_handling(self):
         """Test error handling when referenced files don't exist."""
@@ -439,8 +442,7 @@ class TestXMLFileReferences:
 
             replacement = {
                 "search_file": "nonexistent.xml",
-                "replace_file": "also_nonexistent.xml",
-                "xml_mode": True
+                "replace_file": "also_nonexistent.xml"
             }
 
             # Should raise SystemExit due to file not found

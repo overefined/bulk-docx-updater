@@ -16,16 +16,16 @@ class TestDocxBulkUpdater:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.replacements = [
-            {"search": "old text", "replace": "new text"},
-            {"search": "test", "replace": "example"}
+        self.operations = [
+            {"op": "replace", "search": "old text", "replace": "new text"},
+            {"op": "replace", "search": "test", "replace": "example"}
         ]
     
     def test_init_default_parameters(self):
         """Test initialization with default parameters."""
-        updater = DocxBulkUpdater(self.replacements)
+        updater = DocxBulkUpdater(self.operations)
         
-        assert updater.replacements == self.replacements
+        assert updater.operations == self.operations
         assert updater.preserve_formatting is True
         assert updater.standardize_margins is False
         assert updater.margins == {
@@ -36,7 +36,7 @@ class TestDocxBulkUpdater:
         """Test initialization with custom parameters."""
         custom_margins = {'top': 0.5, 'bottom': 0.5, 'left': 0.75, 'right': 0.75}
         updater = DocxBulkUpdater(
-            self.replacements,
+            self.operations,
             preserve_formatting=False,
             standardize_margins=True,
             margins=custom_margins
@@ -48,7 +48,7 @@ class TestDocxBulkUpdater:
     
     def test_components_initialization(self):
         """Test that internal components are properly initialized."""
-        updater = DocxBulkUpdater(self.replacements)
+        updater = DocxBulkUpdater(self.operations)
         
         # Check that formatter and text_replacer are initialized
         assert hasattr(updater, 'formatter')
@@ -58,7 +58,7 @@ class TestDocxBulkUpdater:
     
     def test_format_diff(self):
         """Test the format_diff method."""
-        updater = DocxBulkUpdater(self.replacements)
+        updater = DocxBulkUpdater(self.operations)
         original_lines = ["line 1", "line 2", "line 3"]
         modified_lines = ["line 1", "changed line 2", "line 3"]
         
@@ -72,7 +72,7 @@ class TestDocxBulkUpdater:
     
     def test_remove_empty_paragraphs_after_pattern(self):
         """Test the remove_empty_paragraphs_after_pattern method."""
-        updater = DocxBulkUpdater(self.replacements)
+        updater = DocxBulkUpdater(self.operations)
         
         # Create a test document
         doc = Document()
@@ -92,7 +92,7 @@ class TestDocxBulkUpdater:
     
     def test_remove_empty_paragraphs_after_pattern_no_match(self):
         """Test remove_empty_paragraphs_after_pattern when pattern is not found."""
-        updater = DocxBulkUpdater(self.replacements)
+        updater = DocxBulkUpdater(self.operations)
         
         # Create a test document without the pattern
         doc = Document()

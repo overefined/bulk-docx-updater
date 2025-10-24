@@ -10,7 +10,7 @@ from docx import Document
 from docx.shared import Inches
 
 from document_processor import DocxBulkUpdater
-from config import load_replacements_from_json
+from config import load_operations_from_json
 
 
 class TestTableCellReplacement:
@@ -54,17 +54,18 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 0,
                 'column': 0,
                 'replace': 'Stage'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -84,18 +85,19 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with validation
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 0,
                 'column': 1,
                 'search': 'Time',
                 'replace': 'Duration'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -129,18 +131,19 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement targeting the second table specifically
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_header': 'Phase, Time, O2 %',  # Complete header match
                 'row': 1,
                 'column': 0,
                 'search': 'Data2',
                 'replace': 'Modified Data2'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -165,22 +168,23 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with incorrect validation
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 0,
                 'column': 0,
                 'search': 'WrongContent',
                 'replace': 'Stage'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
 
         # Test the specific cell replacement method
         doc = Document(test_file)
-        cell_config = replacements[0]['replace_table_cell']
+        cell_config = operations[0]
         result = processor.replace_table_cell(doc, cell_config)
 
         # Verify replacement was not applied due to validation failure
@@ -198,17 +202,18 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with formatting
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 0,
                 'column': 0,
                 'replace': '{format:left,bold}Phase Header{/format}'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -232,17 +237,18 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement for second table
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 1,
                 'row': 0,
                 'column': 0,
                 'replace': 'Full Name'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -267,21 +273,22 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with invalid table index
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 99,  # Non-existent table
                 'row': 0,
                 'column': 0,
                 'replace': 'Test'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
 
         # Test the specific cell replacement method
         doc = Document(test_file)
-        cell_config = replacements[0]['replace_table_cell']
+        cell_config = operations[0]
         result = processor.replace_table_cell(doc, cell_config)
 
         # Verify replacement failed gracefully
@@ -295,21 +302,22 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with invalid row index
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 99,  # Non-existent row
                 'column': 0,
                 'replace': 'Test'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
 
         # Test the specific cell replacement method
         doc = Document(test_file)
-        cell_config = replacements[0]['replace_table_cell']
+        cell_config = operations[0]
         result = processor.replace_table_cell(doc, cell_config)
 
         # Verify replacement failed gracefully
@@ -323,21 +331,22 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with invalid column index
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 0,
                 'column': 99,  # Non-existent column
                 'replace': 'Test'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
 
         # Test the specific cell replacement method
         doc = Document(test_file)
-        cell_config = replacements[0]['replace_table_cell']
+        cell_config = operations[0]
         result = processor.replace_table_cell(doc, cell_config)
 
         # Verify replacement failed gracefully
@@ -351,17 +360,18 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with empty content
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_index': 0,
                 'row': 0,
                 'column': 0,
                 'replace': ''
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -405,8 +415,8 @@ class TestTableCellReplacement:
         config_file.write_text(config_content)
 
         # Load config and apply replacements
-        replacements = load_replacements_from_json(config_file)
-        processor = DocxBulkUpdater(replacements)
+        operations = load_operations_from_json(config_file)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacements were applied
@@ -426,16 +436,17 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement without table_index (should default to 0)
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'row': 0,
                 'column': 0,
                 'replace': 'Default Table'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied to first table
@@ -454,17 +465,18 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement using table_header to target second table
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_header': 'Name',  # This should match the second table
                 'row': 0,
                 'column': 0,
                 'replace': 'Full Name'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -489,21 +501,22 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement with non-existent header
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_header': 'NonExistentHeader',
                 'row': 0,
                 'column': 0,
                 'replace': 'Test'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
 
         # Test the specific cell replacement method
         doc = Document(test_file)
-        cell_config = replacements[0]['replace_table_cell']
+        cell_config = operations[0]
         result = processor.replace_table_cell(doc, cell_config)
 
         # Verify replacement failed gracefully
@@ -517,18 +530,19 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement using table_header with validation
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_header': 'Phase',  # This should match the first table
                 'row': 0,
                 'column': 1,
                 'search': 'Time',  # Validate current content
                 'replace': 'Duration'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied
@@ -562,18 +576,19 @@ class TestTableCellReplacement:
         doc.save(test_file)
 
         # Configure replacement targeting the second table specifically
-        replacements = [{
-            'replace_table_cell': {
+        operations = [{
+            'op': 'replace_table_cell',
+
                 'table_header': 'Phase, Time, O2 %',  # Complete header match
                 'row': 1,
                 'column': 0,
                 'search': 'Data2',
                 'replace': 'Modified Data2'
-            }
+            
         }]
 
         # Apply replacement
-        processor = DocxBulkUpdater(replacements)
+        processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 
         # Verify replacement was applied

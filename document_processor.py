@@ -5,7 +5,6 @@ Contains the DocxBulkUpdater class and methods for document-level operations
 like margin standardization, paragraph cleanup, and change preview.
 """
 from __future__ import annotations
-import re
 import difflib
 import tempfile
 import shutil

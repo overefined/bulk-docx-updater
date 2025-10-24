@@ -235,7 +235,7 @@ class DocxBulkUpdater:
         """Standardize margins for all sections in the document."""
         if not self.standardize_margins:
             return False
-            
+
         modified = False
         for section in doc.sections:
             # Set margins using Inches for consistency
@@ -244,8 +244,25 @@ class DocxBulkUpdater:
             section.left_margin = Inches(self.margins['left'])
             section.right_margin = Inches(self.margins['right'])
             modified = True
-            
+
         return modified
+
+    def remove_document_title(self, doc: Document) -> bool:
+        """Remove the document title from core properties.
+
+        Args:
+            doc: The Document object
+
+        Returns:
+            True if title was removed, False if no title existed
+        """
+        # Check if there's a title to remove
+        if doc.core_properties.title:
+            self._logger.debug(f"Removing document title: '{doc.core_properties.title}'")
+            doc.core_properties.title = ''
+            return True
+
+        return False
     
     def _has_column_break_in_run(self, run) -> bool:
         """Check if a run contains a column break."""
@@ -300,6 +317,12 @@ class DocxBulkUpdater:
                 if self.standardize_document_margins(doc):
                     modified = True
 
+            # Remove document title if specified
+            for op in self.operations:
+                if op.get('op') == 'remove_title':
+                    if self.remove_document_title(doc):
+                        modified = True
+
             # Execute non-text operations first
             for op in self.operations:
                 if op.get('op') == 'table_header_repeat':
@@ -348,7 +371,7 @@ class DocxBulkUpdater:
             if modified:
                 doc.save(file_path)
                 return True
-            
+
             return False
             
         except Exception as e:
@@ -396,6 +419,10 @@ class DocxBulkUpdater:
 
         # Track formatting operations
         for op in self.operations:
+            if op.get('op') == 'remove_title':
+                if self.remove_document_title(modified_doc):
+                    operation_results.append(f"Removed document title: '{original_properties.get('title', '')}'")
+
             if op.get('op') == 'table_header_repeat':
                 pat = op.get('pattern')
                 enable = True if op.get('enabled', True) else False
@@ -457,6 +484,9 @@ class DocxBulkUpdater:
     def _extract_document_properties(self, doc: Document) -> Dict[str, any]:
         """Extract document properties for comparison."""
         properties = {}
+
+        # Extract core properties
+        properties['title'] = doc.core_properties.title or ''
 
         # Extract table header repeat properties
         table_headers = []

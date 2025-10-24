@@ -1,3 +1,6 @@
 [
-  { "set_table_column_widths": { "table_header": "Time, Phase, O2 %", "column_widths": [0.7, 0.6] } }
+  { "remove_title": true },
+  { "search": "Slipstream Environmental Services, LLC", "replace": "Alliance Technical Group"},
+  { "search": "Slipstream Environmental Services LLC", "replace": "Alliance Technical Group"},
+  { "search": "Slipstream Environmental Services", "replace": "Alliance Technical Group"}
 ]

@@ -1,2 +1,5 @@
 source .venv/bin/activate
 python3 main.py /mnt/c/Development/scripts/docx-templates/test/FTIR_Method_2_20250617.docx --show-xml > xml
+
+python main.py "C:\Development\scripts\docx-templates\templates" -c replace.json --dry-run
+python main.py "C:\Development\scripts\docx-templates\test" -c replace.json --dry-run

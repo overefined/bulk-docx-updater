@@ -65,6 +65,7 @@ JSON array of operations:
 ```json
 { "cleanup_empty_after": "HEADER" }
 { "font_size": { "from": 8, "to": 10 } }
+{ "remove_title": true }
 ```
 
 ## Formatting

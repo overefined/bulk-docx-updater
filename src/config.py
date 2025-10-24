@@ -70,7 +70,8 @@ def _normalize_operation(operation: Dict, config_dir: Path) -> Dict:
         'set_table_column_widths',
         'cleanup_empty_after',
         'table_header_repeat',
-        'font_size'
+        'font_size',
+        'remove_title'
     ]
 
     for op_name in single_key_ops:
@@ -275,6 +276,11 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
             if 'table_index' in op and 'table_header' in op:
                 logging.getLogger(__name__).error("Error: Operation %s: cannot specify both 'table_index' and 'table_header'", i)
                 sys.exit(1)
+
+        elif op_type == 'remove_title':
+            # Validate remove_title operation - it doesn't require any additional fields
+            # Support both {"remove_title": true} and {"op": "remove_title"}
+            pass
 
         else:
             logging.getLogger(__name__).error("Error: Operation %s: unsupported operation type '%s'", i, op_type)

@@ -238,7 +238,7 @@ class TestCLIWorkflow:
                         mock_updater.modify_docx.assert_called_once()
                         
                         # Should print success message
-                        success_printed = any("✓" in str(call) for call in mock_print.call_args_list)
+                        success_printed = any("[OK]" in str(call) for call in mock_print.call_args_list)
                         assert success_printed
     
     @patch('sys.argv', ['main.py', 'test.docx', '--config', 'config.json', '--dry-run'])
@@ -337,7 +337,7 @@ class TestCLIWorkflow:
                         pass
                 
                 # Should print error message
-                error_printed = any("✗" in str(call) for call in mock_print.call_args_list)
+                error_printed = any("[ERROR]" in str(call) for call in mock_print.call_args_list)
                 assert error_printed
     
     @patch('sys.argv', ['main.py', '/test/dir', '--config', 'config.json'])

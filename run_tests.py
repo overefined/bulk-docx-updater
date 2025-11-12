@@ -90,15 +90,15 @@ def main():
     success = run_command(cmd, "Running DOCX Bulk Updater Tests")
     
     if success:
-        print("\n✓ All tests passed!")
-        
+        print("\n[PASS] All tests passed!")
+
         # Show coverage report location if coverage was run
         if args.coverage:
             coverage_dir = script_dir / "htmlcov"
             if coverage_dir.exists():
                 print(f"\nCoverage report available at: {coverage_dir / 'index.html'}")
     else:
-        print("\n✗ Some tests failed!")
+        print("\n[FAIL] Some tests failed!")
         sys.exit(1)
     
     # Additional helpful information

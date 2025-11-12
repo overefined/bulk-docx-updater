@@ -1,9 +1,9 @@
 [
-  { "search": "Mobile Lab: {{ test.getLabName() }}\n", "replace": "Mobile Lab: {{ test.getLabName() }}linebreak"},
-  { "search": "Emissions Tester: {{ test.getTestTechnicianName() }}\n", "replace": "Emissions Tester: {{ test.getTestTechnicianName() }}linebreak"},
-  { "search": "josh.canfield@slipstreamtesting.com\n", "replace": "{{ test.getTestingCompanyContactEmail() }}linebreak"},
-  { "search": "PO Box 1066", "replace": "{{ test.getTestingCompanyAddress1() }}"},
-  { "search": "Sheridan, WY 82801", "replace": "{{ test.getTestingCompanyCity() }}, {{ test.getTestingCompanyState() }} {{ test.getTestingCompanyZip() }}"},
-  { "search": "josh.canfield@slipstreamtesting.com", "replace": "{{ test.getTestingCompanyContactEmail() }}"},
-  { "search": "307-760-5262", "replace": "{{ test.getTestingCompanyContactPhone() }}"}
+  {
+    "op": "clear_properties",
+    "properties": ["author", "company", "title"]
+  },
+  {
+    "set_comments": "{{FILENAME}}"
+  }
 ]

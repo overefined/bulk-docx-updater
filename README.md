@@ -33,7 +33,8 @@ JSON array of operations:
 [
   { "search": "old", "replace": "new" },
   { "search": "<w:t>xml</w:t>", "replace": "<w:t>new</w:t>", "xml_mode": true },
-  { "cleanup_empty_after": "HEADER" }
+  { "set_comments": "Template: {{FILENAME}}" },
+  { "clear_properties": ["author", "company", "title"] }
 ]
 ```
 
@@ -71,11 +72,29 @@ Replaces the first image, maintaining aspect ratio. Optional: `scale` to resize 
 
 Advanced: Add `name`/`alt_text`/`index` to target specific images.
 
+**Set comments**
+```json
+{ "set_comments": "{{FILENAME}}" }
+```
+
+Sets the Comments field in the document (viewable in Word under *File → Info → Properties*). This is useful for storing the template filename or other metadata that needs to be easily visible.
+
+Use `{{FILENAME}}` to automatically use the document's filename. Other available placeholders: `{{BASENAME}}` (without extension), `{{EXTENSION}}`, `{{PARENT_DIR}}`.
+
+**Clear document properties**
+```json
+{ "clear_properties": ["author", "company"] }
+{ "clear_properties": true }
+```
+
+Clears core document properties like author, company, title, subject, etc. Use `true` to clear all common properties (author, company, title, subject, keywords, category), or specify a list of properties to clear.
+
+**Supported properties:** `title`, `subject`, `author`, `keywords`, `comments`, `last_modified_by`, `category`, `content_status`, `company`
+
 **Other**
 ```json
 { "cleanup_empty_after": "HEADER" }
 { "font_size": { "from": 8, "to": 10 } }
-{ "remove_title": true }
 ```
 
 ## Formatting

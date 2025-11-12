@@ -78,8 +78,9 @@ def _normalize_operation(operation: Dict, config_dir: Path) -> Dict:
         'cleanup_empty_after',
         'table_header_repeat',
         'font_size',
-        'remove_title',
-        'replace_image'
+        'replace_image',
+        'set_comments',
+        'clear_properties'
     ]
 
     for op_name in single_key_ops:
@@ -294,11 +295,6 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
                 logging.getLogger(__name__).error("Error: Operation %s: cannot specify both 'table_index' and 'table_header'", i)
                 sys.exit(1)
 
-        elif op_type == 'remove_title':
-            # Validate remove_title operation - it doesn't require any additional fields
-            # Support both {"remove_title": true} and {"op": "remove_title"}
-            pass
-
         elif op_type == 'replace_image':
             # Validate replace_image operation
             # Handle both {"replace_image": "path"} (normalized to 'value') and {"replace_image": {"image_path": "path"}}
@@ -344,6 +340,71 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
             if identifier_count > 1:
                 logging.getLogger(__name__).error("Error: Operation %s: can only specify one of 'name', 'alt_text', or 'index'", i)
                 sys.exit(1)
+
+        elif op_type == 'set_comments':
+            # Validate set_comments operation
+            # Format: {"set_comments": "{{FILENAME}}"} or {"set_comments": "Template: my_template.docx"}
+            # 'value' field should already be set by normalization
+            if 'value' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'set_comments' requires 'value' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['value'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'value' must be string", i)
+                sys.exit(1)
+
+        elif op_type == 'clear_properties':
+            # Validate clear_properties operation
+            # Formats:
+            # {"clear_properties": ["author", "company"]} - clear specific properties
+            # {"clear_properties": true} - clear all common properties (author, company, title, subject, keywords)
+            if 'value' in op:
+                value = op['value']
+                if isinstance(value, bool):
+                    # {"clear_properties": true} format
+                    if value:
+                        op['properties'] = ['author', 'company', 'title', 'subject', 'keywords', 'category']
+                    else:
+                        logging.getLogger(__name__).error("Error: Operation %s: 'clear_properties' with false value doesn't make sense", i)
+                        sys.exit(1)
+                    del op['value']
+                elif isinstance(value, list):
+                    # {"clear_properties": ["author", "company"]} format
+                    op['properties'] = value
+                    del op['value']
+                elif isinstance(value, str):
+                    # {"clear_properties": "author"} format - single property
+                    op['properties'] = [value]
+                    del op['value']
+                else:
+                    logging.getLogger(__name__).error("Error: Operation %s: 'clear_properties' value must be boolean, string, or list", i)
+                    sys.exit(1)
+
+            # Validate properties list
+            if 'properties' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'clear_properties' requires 'properties' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['properties'], list):
+                logging.getLogger(__name__).error("Error: Operation %s: 'properties' must be a list", i)
+                sys.exit(1)
+
+            # List of valid core properties
+            valid_properties = [
+                'title', 'subject', 'author', 'keywords', 'comments',
+                'last_modified_by', 'category', 'content_status'
+            ]
+
+            # Also support 'company' which maps to a different property
+            valid_properties.append('company')
+
+            for prop in op['properties']:
+                if not isinstance(prop, str):
+                    logging.getLogger(__name__).error("Error: Operation %s: property name must be string", i)
+                    sys.exit(1)
+                if prop not in valid_properties:
+                    logging.getLogger(__name__).error("Error: Operation %s: invalid property '%s'. Valid properties: %s", i, prop, ', '.join(valid_properties))
+                    sys.exit(1)
 
         else:
             logging.getLogger(__name__).error("Error: Operation %s: unsupported operation type '%s'", i, op_type)

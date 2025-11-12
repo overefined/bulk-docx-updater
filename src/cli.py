@@ -172,8 +172,9 @@ def main():
                     print(f"no changes: {file_path}")
             else:
                 if updater.modify_docx(file_path):
-                    print(f"✓ {file_path}")
+                    # Use ASCII-safe characters for better cross-platform compatibility
+                    print(f"[OK] {file_path}")
                 else:
                     print(f"- {file_path} (no changes)")
         except Exception as e:
-            print(f"✗ {file_path}: {e}", file=sys.stderr)
+            print(f"[ERROR] {file_path}: {e}", file=sys.stderr)

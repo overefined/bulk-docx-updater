@@ -249,23 +249,155 @@ class DocxBulkUpdater:
 
         return modified
 
-    def remove_document_title(self, doc: Document) -> bool:
-        """Remove the document title from core properties.
+    def clear_core_properties(self, doc: Document, properties: List[str]) -> bool:
+        """Clear specified core document properties.
+
+        Args:
+            doc: The Document object
+            properties: List of property names to clear (e.g., ['author', 'company', 'title'])
+
+        Returns:
+            True if any properties were cleared, False otherwise
+
+        Supported properties:
+            - title: Document title
+            - subject: Document subject
+            - author: Document author/creator
+            - keywords: Document keywords
+            - comments: Document comments
+            - last_modified_by: Last modified by
+            - category: Document category
+            - content_status: Content status
+            - company: Company name (from app.xml extended properties)
+        """
+        from lxml import etree
+
+        modified = False
+        core_props = doc.core_properties
+
+        for prop in properties:
+            try:
+                if prop == 'title':
+                    if core_props.title:
+                        self._logger.debug(f"Clearing title: '{core_props.title}'")
+                        core_props.title = ''
+                        modified = True
+                elif prop == 'subject':
+                    if core_props.subject:
+                        self._logger.debug(f"Clearing subject: '{core_props.subject}'")
+                        core_props.subject = ''
+                        modified = True
+                elif prop == 'author':
+                    if core_props.author:
+                        self._logger.debug(f"Clearing author: '{core_props.author}'")
+                        core_props.author = ''
+                        modified = True
+                elif prop == 'keywords':
+                    if core_props.keywords:
+                        self._logger.debug(f"Clearing keywords: '{core_props.keywords}'")
+                        core_props.keywords = ''
+                        modified = True
+                elif prop == 'comments':
+                    if core_props.comments:
+                        self._logger.debug(f"Clearing comments")
+                        core_props.comments = ''
+                        modified = True
+                elif prop == 'last_modified_by':
+                    if core_props.last_modified_by:
+                        self._logger.debug(f"Clearing last_modified_by: '{core_props.last_modified_by}'")
+                        core_props.last_modified_by = ''
+                        modified = True
+                elif prop == 'category':
+                    if core_props.category:
+                        self._logger.debug(f"Clearing category: '{core_props.category}'")
+                        core_props.category = ''
+                        modified = True
+                elif prop == 'content_status':
+                    if core_props.content_status:
+                        self._logger.debug(f"Clearing content_status: '{core_props.content_status}'")
+                        core_props.content_status = ''
+                        modified = True
+                elif prop == 'company':
+                    # Company is in app.xml (extended properties)
+                    # Access it directly via package parts
+                    app_part = self._get_app_xml_part(doc)
+                    if app_part:
+                        tree = etree.fromstring(app_part.blob)
+                        APP_NS = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+                        namespaces = {'ep': APP_NS}
+
+                        company_elem = tree.find('.//ep:Company', namespaces=namespaces)
+                        if company_elem is not None:
+                            self._logger.debug(f"Clearing Company property: '{company_elem.text}'")
+                            tree.remove(company_elem)
+                            app_part._blob = etree.tostring(tree, xml_declaration=True, encoding="UTF-8", standalone=True)
+                            modified = True
+                else:
+                    self._logger.warning(f"Unknown property: '{prop}'")
+
+            except Exception as e:
+                self._logger.warning(f"Error clearing property '{prop}': {e}")
+
+        return modified
+
+    def _get_app_xml_part(self, doc: Document):
+        """Get the app.xml part from the document package.
 
         Args:
             doc: The Document object
 
         Returns:
-            True if title was removed, False if no title existed
+            The app.xml Part object, or None if not found
         """
-        # Check if there's a title to remove
-        if doc.core_properties.title:
-            self._logger.debug(f"Removing document title: '{doc.core_properties.title}'")
-            doc.core_properties.title = ''
-            return True
+        try:
+            package = doc.part.package
+            for part in package.iter_parts():
+                if str(part.partname) == '/docProps/app.xml':
+                    return part
+            return None
+        except Exception as e:
+            self._logger.debug(f"Error accessing app.xml part: {e}")
+            return None
 
-        return False
-    
+    def _replace_placeholders(self, value: str, file_path: Path) -> str:
+        """Replace placeholders in a value with file-based information.
+
+        Args:
+            value: The value that may contain placeholders
+            file_path: Path to the current document being processed
+
+        Returns:
+            Value with placeholders replaced
+
+        Supported placeholders:
+            {{FILENAME}} - Full filename with extension (e.g., "invoice.docx")
+            {{BASENAME}} - Filename without extension (e.g., "invoice")
+            {{BASENAME_DOTX}} - Filename with .dotx extension (e.g., "invoice.dotx")
+            {{EXTENSION}} - Just the extension (e.g., "docx")
+            {{PARENT_DIR}} - Parent directory name
+        """
+        if not isinstance(value, str):
+            return value
+
+        filename = file_path.name
+        basename = file_path.stem
+        extension = file_path.suffix.lstrip('.')
+        parent_dir = file_path.parent.name
+
+        replacements = {
+            '{{FILENAME}}': filename,
+            '{{BASENAME}}': basename,
+            '{{BASENAME_DOTX}}': f"{basename}.dotx",
+            '{{EXTENSION}}': extension,
+            '{{PARENT_DIR}}': parent_dir,
+        }
+
+        result = value
+        for placeholder, replacement in replacements.items():
+            result = result.replace(placeholder, replacement)
+
+        return result
+
     def _has_column_break_in_run(self, run) -> bool:
         """Check if a run contains a column break."""
         # Check for column breaks in the XML
@@ -319,10 +451,11 @@ class DocxBulkUpdater:
                 if self.standardize_document_margins(doc):
                     modified = True
 
-            # Remove document title if specified
+            # Clear core properties if specified
             for op in self.operations:
-                if op.get('op') == 'remove_title':
-                    if self.remove_document_title(doc):
+                if op.get('op') == 'clear_properties':
+                    properties = op.get('properties', [])
+                    if self.clear_core_properties(doc, properties):
                         modified = True
 
             # Execute non-text operations first
@@ -375,12 +508,20 @@ class DocxBulkUpdater:
                 if self._process_all_text_replacements(doc):
                     modified = True
 
+            # Handle setting Comments field to store template filename
+            for op in self.operations:
+                if op.get('op') == 'set_comments':
+                    value = op.get('value', '')
+                    value = self._replace_placeholders(value, file_path)
+                    doc.core_properties.comments = value
+                    self._logger.debug(f"Set Comments to '{value}'")
+                    modified = True
+
             # Save changes if any modifications were made
             if modified:
                 doc.save(file_path)
-                return True
 
-            return False
+            return modified
             
         except Exception as e:
             logging.getLogger(__name__).error("Error processing %s: %s", file_path, e)
@@ -427,10 +568,6 @@ class DocxBulkUpdater:
 
         # Track formatting operations
         for op in self.operations:
-            if op.get('op') == 'remove_title':
-                if self.remove_document_title(modified_doc):
-                    operation_results.append(f"Removed document title: '{original_properties.get('title', '')}'")
-
             if op.get('op') == 'table_header_repeat':
                 pat = op.get('pattern')
                 enable = True if op.get('enabled', True) else False

@@ -27,14 +27,14 @@ Examples
 
 ## Config Format
 
-JSON array of operations:
+JSON array of operations with `op` field:
 
 ```json
 [
-  { "search": "old", "replace": "new" },
-  { "search": "<w:t>xml</w:t>", "replace": "<w:t>new</w:t>", "xml_mode": true },
-  { "set_comments": "Template: {{FILENAME}}" },
-  { "clear_properties": ["author", "company", "title"] }
+  { "op": "replace", "search": "old", "replace": "new" },
+  { "op": "xml_replace", "search": "<w:t>xml</w:t>", "replace": "<w:t>new</w:t>" },
+  { "op": "set_comments", "value": "Template: {{FILENAME}}" },
+  { "op": "clear_properties", "properties": ["author", "company", "title"] }
 ]
 ```
 
@@ -42,59 +42,51 @@ JSON array of operations:
 
 **Replace text**
 ```json
-{ "search": "Old Text", "replace": "New Text" }
+{ "op": "replace", "search": "Old Text", "replace": "New Text" }
 ```
 
 **Replace XML**
 ```json
-{ "search": "<w:t>old</w:t>", "replace": "<w:t>new</w:t>", "xml_mode": true }
-```
-
-**XML from files**
-```json
-{ "search_file": "search.xml", "replace_file": "replace.xml", "xml_mode": true }
+{ "op": "xml_replace", "search": "<w:t>old</w:t>", "replace": "<w:t>new</w:t>" }
+{ "op": "xml_replace", "search_file": "search.xml", "replace_file": "replace.xml" }
 ```
 
 **Table operations**
 ```json
-{ "replace_table_cell": { "table_header": "Phase, Time", "row": 0, "column": 1, "replace": "Time" } }
-{ "set_table_column_widths": { "table_header": "Phase, Time", "column_widths": [1.5, 2.0] } }
-{ "table_header_repeat": { "pattern": "Phase, Time", "enabled": true } }
+{ "op": "replace_table_cell", "table_header": "Phase, Time", "row": 0, "column": 1, "replace": "Time" }
+{ "op": "set_table_column_widths", "table_header": "Phase, Time", "column_widths": [1.5, 2.0] }
+{ "op": "table_header_repeat", "pattern": "Phase, Time", "enabled": true }
 ```
 
 **Image replacement**
 ```json
-{ "replace_image": "path/to/logo.png" }
-{ "replace_image": { "image_path": "logo.png", "scale": 0.5, "center": true } }
+{ "op": "replace_image", "image_path": "path/to/logo.png" }
+{ "op": "replace_image", "image_path": "logo.png", "scale": 0.5, "center": true }
 ```
 
-Replaces the first image, maintaining aspect ratio. Optional: `scale` to resize (0.5 = 50%, 2.0 = 200%), `center` to center horizontally (automatically converts inline images to floating when centering).
-
-Advanced: Add `name`/`alt_text`/`index` to target specific images.
+Replaces first image, maintaining aspect ratio. Optional: `scale` (0.5 = 50%), `center` (true/false). Advanced: `name`/`alt_text`/`index` to target specific images.
 
 **Set comments**
 ```json
-{ "set_comments": "{{FILENAME}}" }
+{ "op": "set_comments", "value": "{{FILENAME}}" }
 ```
 
-Sets the Comments field in the document (viewable in Word under *File → Info → Properties*). This is useful for storing the template filename or other metadata that needs to be easily visible.
+Sets Comments field (File → Info → Properties). Placeholders: `{{FILENAME}}`, `{{BASENAME}}`, `{{EXTENSION}}`, `{{PARENT_DIR}}`.
 
-Use `{{FILENAME}}` to automatically use the document's filename. Other available placeholders: `{{BASENAME}}` (without extension), `{{EXTENSION}}`, `{{PARENT_DIR}}`.
-
-**Clear document properties**
+**Clear properties**
 ```json
-{ "clear_properties": ["author", "company"] }
-{ "clear_properties": true }
+{ "op": "clear_properties", "properties": ["author", "company"] }
+{ "op": "clear_properties", "properties": true }
 ```
 
-Clears core document properties like author, company, title, subject, etc. Use `true` to clear all common properties (author, company, title, subject, keywords, category), or specify a list of properties to clear.
+Clears document properties. Use `true` to clear all common properties.
 
-**Supported properties:** `title`, `subject`, `author`, `keywords`, `comments`, `last_modified_by`, `category`, `content_status`, `company`
+**Supported:** `title`, `subject`, `author`, `keywords`, `comments`, `last_modified_by`, `category`, `content_status`, `company`
 
 **Other**
 ```json
-{ "cleanup_empty_after": "HEADER" }
-{ "font_size": { "from": 8, "to": 10 } }
+{ "op": "cleanup_empty_after", "pattern": "HEADER" }
+{ "op": "font_size", "from": 8, "to": 10 }
 ```
 
 ## Formatting

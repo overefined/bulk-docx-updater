@@ -392,22 +392,20 @@ class TestTableCellReplacement:
         # Create config file
         config_content = """[
   {
-    "replace_table_cell": {
-      "table_index": 0,
-      "row": 0,
-      "column": 0,
-      "search": "Phase",
-      "replace": "{format:left}Time{/format}"
-    }
+    "op": "replace_table_cell",
+    "table_index": 0,
+    "row": 0,
+    "column": 0,
+    "search": "Phase",
+    "replace": "{format:left}Time{/format}"
   },
   {
-    "replace_table_cell": {
-      "table_index": 0,
-      "row": 0,
-      "column": 1,
-      "search": "Time",
-      "replace": "{format:left}Phase{/format}"
-    }
+    "op": "replace_table_cell",
+    "table_index": 0,
+    "row": 0,
+    "column": 1,
+    "search": "Time",
+    "replace": "{format:left}Phase{/format}"
   }
 ]"""
 

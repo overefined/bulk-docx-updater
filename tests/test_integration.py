@@ -42,8 +42,8 @@ class TestIntegrationWithRealDocuments:
         
         # Create test configuration
         test_config = [
-            {"search": "old text", "replace": "new content"},
-            {"search": "test document", "replace": "sample document"}
+            {"op": "replace", "search": "old text", "replace": "new content"},
+            {"op": "replace", "search": "test document", "replace": "sample document"}
         ]
 
         with open(self.config_file, 'w') as f:

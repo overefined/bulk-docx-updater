@@ -23,8 +23,8 @@ class TestConfigLoading:
     def test_load_replacements_from_json_array_format(self):
         """Test loading replacements from JSON array format."""
         ops_data = [
-            {"search": "old1", "replace": "new1"},
-            {"search": "old2", "replace": "new2"}
+            {"op": "replace", "search": "old1", "replace": "new1"},
+            {"op": "replace", "search": "old2", "replace": "new2"}
         ]
         json_content = json.dumps(ops_data)
 
@@ -80,7 +80,7 @@ class TestConfigLoading:
     
     def test_load_replacements_from_json_utf8_encoding(self):
         """Test that JSON files are loaded with UTF-8 encoding."""
-        json_data = [{"search": "café", "replace": "coffee"}]
+        json_data = [{"op": "replace", "search": "café", "replace": "coffee"}]
         json_content = json.dumps(json_data, ensure_ascii=False)
 
         mock_file = mock_open(read_data=json_content)
@@ -92,16 +92,16 @@ class TestConfigLoading:
             # Result is in internal replacements format (op field stripped)
             assert result == [{"search": "café", "replace": "coffee"}]
 
-    def test_load_replacements_simplified_format(self):
-        """Test loading replacements with simplified format (inferred operation types)."""
+    def test_load_replacements_with_op_field(self):
+        """Test loading replacements with explicit op field."""
         ops_data = [
-            {"search": "old", "replace": "new"},
-            {"search": "xml", "replace": "xml", "xml_mode": True},
-            {"cleanup_empty_after": "HEADER"},
-            {"replace_table_cell": {"row": 0, "column": 1, "replace": "text"}},
-            {"set_table_column_widths": {"column_widths": [1.5, 2.0]}},
-            {"table_header_repeat": {"pattern": "Header"}},
-            {"font_size": {"from": 8, "to": 10}}
+            {"op": "replace", "search": "old", "replace": "new"},
+            {"op": "xml_replace", "search": "xml", "replace": "xml"},
+            {"op": "cleanup_empty_after", "pattern": "HEADER"},
+            {"op": "replace_table_cell", "row": 0, "column": 1, "replace": "text"},
+            {"op": "set_table_column_widths", "column_widths": [1.5, 2.0]},
+            {"op": "table_header_repeat", "pattern": "Header"},
+            {"op": "font_size", "from": 8, "to": 10}
         ]
         json_content = json.dumps(ops_data)
 

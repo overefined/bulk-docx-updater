@@ -48,56 +48,11 @@ def load_operations_from_json(config_file: Path) -> List[Dict[str, Any]]:
 
 
 def _normalize_operation(operation: Dict, config_dir: Path) -> Dict:
-    """Normalize operation format and process file references.
+    """Process file references in operations.
 
-    Converts simplified format to normalized format with 'op' field:
-    - {"search": "x", "replace": "y"} -> {"op": "replace", "search": "x", "replace": "y"}
-    - {"replace_table_cell": {...}} -> {"op": "replace_table_cell", ...}
+    Operations must have an 'op' field - no inference from old formats.
     """
-    # If already has 'op' field, just process file references
-    if 'op' in operation:
-        return _process_file_references(operation, config_dir)
-
-    # Infer operation type from fields present
-    # Check for file references first (they need to be loaded before we can determine the op type)
-    if 'search_file' in operation or 'replace_file' in operation:
-        # Process file references first
-        operation = _process_file_references(operation, config_dir)
-        # After loading files, fall through to determine op type
-
-    if 'search' in operation and 'replace' in operation:
-        # Text replacement operation
-        op_type = 'xml_replace' if operation.get('xml_mode') else 'replace'
-        operation['op'] = op_type
-        return operation
-
-    # Single-key operation formats
-    single_key_ops = [
-        'replace_table_cell',
-        'set_table_column_widths',
-        'cleanup_empty_after',
-        'table_header_repeat',
-        'font_size',
-        'replace_image',
-        'set_comments',
-        'clear_properties'
-    ]
-
-    for op_name in single_key_ops:
-        if op_name in operation:
-            # Flatten: {"replace_table_cell": {...}} -> {"op": "replace_table_cell", ...}
-            op_config = operation[op_name]
-            if isinstance(op_config, dict):
-                normalized = {'op': op_name, **op_config}
-            elif isinstance(op_config, (str, bool, int, float)):
-                # Handle simple values like {"cleanup_empty_after": "HEADER"}
-                normalized = {'op': op_name, 'value': op_config}
-            else:
-                normalized = {'op': op_name}
-            return _process_file_references(normalized, config_dir)
-
-    # If we can't infer, return as-is and let validation catch it
-    return operation
+    return _process_file_references(operation, config_dir)
 
 
 def _process_file_references(operation: Dict, config_dir: Path) -> Dict:

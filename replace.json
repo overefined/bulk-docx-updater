@@ -1,9 +1,12 @@
 [
   {
-    "op": "clear_properties",
-    "properties": ["author", "company", "title"]
+    "op": "replace",
+    "search": ", Unit {{ test.getTestLocationUnit() }}",
+    "replace": ""
   },
   {
-    "set_comments": "{{FILENAME}}"
+    "op": "replace",
+    "search": ", {{ test.getDriverSerialNumber() }}",
+    "replace": ", Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}"
   }
 ]

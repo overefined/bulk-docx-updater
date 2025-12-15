@@ -11,6 +11,7 @@ import logging
 
 from src.config import load_operations_from_json, validate_operations, parse_margin_settings
 from src.document_processor import DocxBulkUpdater
+from xml_inspector import inspect_docx_xml
 
 
 def main():

@@ -264,10 +264,9 @@ class TestImageReplacement:
         # Create config file
         config_content = f"""[
   {{
-    "replace_image": {{
-      "image_path": "{str(absolute_image_path).replace(chr(92), chr(92)+chr(92))}",
-      "name": "Picture 2"
-    }}
+    "op": "replace_image",
+    "image_path": "{str(absolute_image_path).replace(chr(92), chr(92)+chr(92))}",
+    "name": "Picture 2"
   }}
 ]"""
 

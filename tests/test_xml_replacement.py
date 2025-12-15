@@ -373,11 +373,12 @@ class TestXMLFileReferences:
             config_file = temp_dir / "config.json"
             config_data = [
                 {
+                    "op": "xml_replace",
                     "search_file": "search_pattern.xml",
-                    "replace_file": "replace_pattern.xml",
-                    "xml_mode": True
+                    "replace_file": "replace_pattern.xml"
                 },
                 {
+                    "op": "replace",
                     "search": "regular text",
                     "replace": "replacement text"
                 }
@@ -395,7 +396,7 @@ class TestXMLFileReferences:
             xml_replacement = replacements[0]
             assert "search" in xml_replacement
             assert "replace" in xml_replacement
-            assert xml_replacement["op"] == "xml_replace"
+            assert xml_replacement.get("xml_mode") is True
             assert "Large XML block with" in xml_replacement["search"]
             assert "REPLACED XML with" in xml_replacement["replace"]
             assert "search_file" not in xml_replacement

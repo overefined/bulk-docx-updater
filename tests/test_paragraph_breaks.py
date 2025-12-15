@@ -28,10 +28,12 @@ class TestParagraphBreakEndToEnd:
         """Test that paragraph break configurations load and validate correctly."""
         config_data = [
             {
+                "op": "replace",
                 "search": "SITE PHOTOS",
                 "replace": "SITE PHOTOSpagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"
             },
             {
+                "op": "replace",
                 "search": "TEST RESULTS",
                 "replace": "Result1paragraphbreakResult2paragraphbreakResult3"
             }

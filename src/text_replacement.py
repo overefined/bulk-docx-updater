@@ -186,58 +186,56 @@ class TextReplacer:
     
     def _rebuild_paragraph_basic(self, paragraph: Paragraph, new_text: str):
         """Basic paragraph rebuilding for cross-paragraph replacements."""
-        # Store original formatting from first run if available
-        original_font_formatting = FontFormatter.get_base_font_formatting(paragraph.runs)
-        
+        # Don't preserve formatting for cross-paragraph replacements
+        # as we can't reliably map formatting across paragraph boundaries
         # Clear all runs
         self._clear_paragraph(paragraph)
-        
+
         # Process formatting tokens in the new text
         text_segments = self.formatter.process_formatting_tokens(new_text, paragraph)
-        
+
         # Add runs with the new text and formatting
         for text, formatting in text_segments:
             if text:  # Only create runs for non-empty text
                 run = paragraph.add_run(text)
-                
-                # Apply original formatting as base
-                FontFormatter.apply_font_properties(run, original_font_formatting)
-                
-                # Apply new formatting from tokens
+                # Apply formatting from tokens (no base formatting for cross-paragraph replacements)
                 self.formatter.apply_formatting_to_run(run, formatting, paragraph)
     
     def _rebuild_paragraph_advanced(self, paragraph: Paragraph, new_text: str):
         """Advanced paragraph rebuilding with sophisticated formatting preservation."""
         # Extract formatting information before modifying paragraph
         formatting_context = self._extract_formatting_context(paragraph)
-        
+
         # Clear paragraph content while preserving structure
         self._clear_paragraph_preserving_structure(paragraph)
-        
+
         # Process the new text for formatting tokens
         text_segments = self.formatter.process_formatting_tokens(new_text, paragraph)
-        
+
         # Apply the segments based on their formatting requirements
         if self._requires_special_handling(text_segments):
-            self._handle_alignment_segments(paragraph, text_segments, 
-                                          formatting_context['first_run'], 
+            self._handle_alignment_segments(paragraph, text_segments,
+                                          formatting_context['first_run'],
                                           formatting_context['leading_whitespace'],
                                           formatting_context['run_formats'])
         else:
-            self._apply_text_segments_to_paragraph(paragraph, text_segments, 
-                                                 formatting_context['run_formats'], 
-                                                 formatting_context['leading_whitespace'])
+            self._apply_text_segments_to_paragraph(paragraph, text_segments,
+                                                 formatting_context['run_formats'],
+                                                 formatting_context['leading_whitespace'],
+                                                 formatting_context['run_texts'])
     
     def _extract_formatting_context(self, paragraph: Paragraph) -> Dict:
         """Extract formatting context from paragraph before modification."""
         original_runs = list(paragraph.runs)
         original_formatting = []
+        original_run_texts = []
         leading_whitespace_runs = []
 
-        # Extract run formatting
+        # Extract run formatting and text
         for run in original_runs:
             formatting = FontFormatter.extract_font_properties(run)
             original_formatting.append(formatting)
+            original_run_texts.append(run.text if run.text else "")
 
         # Find leading whitespace runs
         for run in original_runs:
@@ -249,6 +247,7 @@ class TextReplacer:
         return {
             'original_runs': original_runs,
             'run_formats': original_formatting,
+            'run_texts': original_run_texts,
             'leading_whitespace': leading_whitespace_runs,
             'first_run': original_runs[0] if original_runs else None
         }
@@ -270,62 +269,175 @@ class TextReplacer:
         return any(seg_formatting.get('alignment') is not None or seg_formatting.get('paragraph_break_after')
                   for _, seg_formatting in text_segments)
     
-    def _apply_text_segments_to_paragraph(self, paragraph: Paragraph, text_segments, original_formatting, leading_whitespace_runs):
+    def _build_formatting_map(self, original_runs: List) -> List[Tuple[int, Dict]]:
+        """Build a map of character positions to formatting in the original paragraph.
+
+        Returns a list of (char_position, formatting_dict) tuples marking where formatting changes.
+        """
+        char_position = 0
+        formatting_map = []
+        prev_formatting = None
+
+        for run in original_runs:
+            run_text = run.text if run.text else ""
+            current_formatting = FontFormatter.extract_font_properties(run)
+
+            # Check if formatting changed from previous run
+            if current_formatting != prev_formatting:
+                formatting_map.append((char_position, current_formatting))
+                prev_formatting = current_formatting
+
+            char_position += len(run_text)
+
+        return formatting_map
+
+    def _split_text_by_formatting(self, text: str, formatting_map: List[Tuple[int, Dict]]) -> List[Tuple[str, Dict]]:
+        """Split text into segments based on where formatting changes occur.
+
+        Args:
+            text: The text to split
+            formatting_map: List of (char_position, formatting_dict) tuples
+
+        Returns:
+            List of (text_segment, formatting_dict) tuples
+        """
+        if not formatting_map:
+            return [(text, {})]
+
+        segments = []
+        text_length = len(text)
+
+        for i, (pos, formatting) in enumerate(formatting_map):
+            # Determine the end position for this segment
+            if i + 1 < len(formatting_map):
+                next_pos = formatting_map[i + 1][0]
+                end_pos = min(next_pos, text_length)
+            else:
+                end_pos = text_length
+
+            # Extract the text segment
+            if pos < text_length:
+                segment_text = text[pos:end_pos]
+                if segment_text:  # Only add non-empty segments
+                    segments.append((segment_text, formatting))
+
+        return segments
+
+    def _apply_text_segments_to_paragraph(self, paragraph: Paragraph, text_segments, original_formatting, leading_whitespace_runs, original_run_texts=None):
         """Apply text segments to paragraph with sophisticated formatting preservation."""
         # Get the first run to work with
         first_run = paragraph.runs[0] if paragraph.runs else paragraph.add_run()
 
-        # First, add back any leading whitespace runs
-        current_run = first_run
-        for i, whitespace_text in enumerate(leading_whitespace_runs):
-            if i == 0:
-                # Use the first run for the first whitespace
-                current_run.text = whitespace_text
+        # Check if we have inline formatting in any segment
+        has_inline_formatting = any(
+            seg_fmt.get('bold') is not None or
+            seg_fmt.get('italic') is not None or
+            seg_fmt.get('underline') is not None or
+            seg_fmt.get('font_name') is not None or
+            seg_fmt.get('font_size') is not None or
+            seg_fmt.get('alignment') is not None
+            for _, seg_fmt in text_segments
+        )
+
+        # If there's no inline formatting and we have a single text segment,
+        # split it based on original formatting boundaries to preserve formatting structure
+        if not has_inline_formatting and len(text_segments) == 1 and original_run_texts:
+            text_only, _ = text_segments[0]
+
+            # First, add whitespace runs
+            current_run = first_run
+            for i, whitespace_text in enumerate(leading_whitespace_runs):
+                if i == 0:
+                    current_run.text = whitespace_text
+                else:
+                    current_run = paragraph.add_run(whitespace_text)
+
+                if i < len(original_formatting):
+                    FontFormatter.apply_font_properties(current_run, original_formatting[i])
+
+            # Now use the original run texts to calculate exact split positions
+            base_idx = len(leading_whitespace_runs)
+            remaining_formatting = original_formatting[base_idx:] if base_idx < len(original_formatting) else []
+            remaining_run_texts = original_run_texts[base_idx:] if base_idx < len(original_run_texts) else []
+
+            if not remaining_formatting:
+                # No formatting to preserve, just add the text
+                if leading_whitespace_runs:
+                    run = paragraph.add_run(text_only)
+                else:
+                    first_run.text = text_only
+            elif len(remaining_formatting) == 1:
+                # Single formatting, apply it to all text
+                if leading_whitespace_runs:
+                    run = paragraph.add_run(text_only)
+                else:
+                    run = first_run
+                    run.text = text_only
+                FontFormatter.apply_font_properties(run, remaining_formatting[0])
             else:
-                # Create new runs for additional whitespace
-                current_run = paragraph.add_run(whitespace_text)
+                # Multiple formatting runs - use original run texts to find exact split position
+                first_fmt = remaining_formatting[0]
 
-            # Apply original formatting if available
-            if i < len(original_formatting):
-                FontFormatter.apply_font_properties(current_run, original_formatting[i])
-        
-        # Apply the text segments after the whitespace runs
-        if text_segments:
-            # Determine which run to use for the first text segment
-            if leading_whitespace_runs:
-                # If we have whitespace runs, create a new run for the first text segment
-                first_text_run = paragraph.add_run()
-                current_run = first_text_run
-            else:
-                # No whitespace runs, use the first run
-                first_text_run = first_run
-                current_run = first_text_run
-            
-            first_text, first_formatting = text_segments[0]
-            first_text_run.text = first_text
+                # Find where formatting changes and calculate character position
+                format_change_idx = 1
+                char_pos = 0
+                for i in range(len(remaining_formatting)):
+                    if i > 0 and remaining_formatting[i] != first_fmt:
+                        format_change_idx = i
+                        break
+                    # Accumulate character count from original runs with same formatting
+                    if i < len(remaining_run_texts):
+                        char_pos += len(remaining_run_texts[i])
 
-            # Apply original formatting as base (use formatting from after whitespace)
-            base_formatting_idx = len(leading_whitespace_runs)
-            if base_formatting_idx < len(original_formatting):
-                FontFormatter.apply_font_properties(first_text_run, original_formatting[base_formatting_idx])
+                # Use this exact character position for splitting
+                split_pos = char_pos
 
-            # Apply segment-specific formatting
-            if first_formatting:
-                self.formatter.apply_formatting_to_run(first_text_run, first_formatting, paragraph)
-            
-            # Create additional runs for remaining segments
-            for i, (segment_text, segment_formatting) in enumerate(text_segments[1:], 1):
-                if segment_text:
-                    new_run = paragraph.add_run(segment_text)
-                    
-                    # Apply base formatting from original runs if available
-                    base_idx = min(base_formatting_idx + i, len(original_formatting) - 1)
-                    if base_idx < len(original_formatting):
-                        FontFormatter.apply_font_properties(new_run, original_formatting[base_idx])
-                    
-                    # Apply segment-specific formatting
-                    if segment_formatting:
-                        self.formatter.apply_formatting_to_run(new_run, segment_formatting, paragraph)
+                # Add first segment with first formatting
+                if leading_whitespace_runs:
+                    run1 = paragraph.add_run(text_only[:split_pos])
+                else:
+                    run1 = first_run
+                    run1.text = text_only[:split_pos]
+                FontFormatter.apply_font_properties(run1, first_fmt)
+
+                # Add second segment with second formatting
+                if split_pos < len(text_only):
+                    run2 = paragraph.add_run(text_only[split_pos:])
+                    second_fmt = remaining_formatting[format_change_idx] if format_change_idx < len(remaining_formatting) else remaining_formatting[-1]
+                    FontFormatter.apply_font_properties(run2, second_fmt)
+        else:
+            # Has inline formatting or multiple segments - use segment-based approach
+            # First, add back any leading whitespace runs
+            current_run = first_run
+            for i, whitespace_text in enumerate(leading_whitespace_runs):
+                if i == 0:
+                    current_run.text = whitespace_text
+                else:
+                    current_run = paragraph.add_run(whitespace_text)
+
+                if i < len(original_formatting):
+                    FontFormatter.apply_font_properties(current_run, original_formatting[i])
+
+            # Apply the text segments
+            if text_segments:
+                base_formatting_idx = len(leading_whitespace_runs)
+
+                for i, (segment_text, segment_formatting) in enumerate(text_segments):
+                    if segment_text:
+                        if i == 0 and not leading_whitespace_runs:
+                            run = first_run
+                            run.text = segment_text
+                        else:
+                            run = paragraph.add_run(segment_text)
+
+                        # Apply base formatting from original
+                        fmt_idx = min(base_formatting_idx + i, len(original_formatting) - 1)
+                        if fmt_idx < len(original_formatting):
+                            FontFormatter.apply_font_properties(run, original_formatting[fmt_idx])
+
+                        # Apply segment-specific formatting (overrides base)
+                        if segment_formatting:
+                            self.formatter.apply_formatting_to_run(run, segment_formatting, paragraph)
     
     def _clear_paragraph(self, paragraph: Paragraph):
         """Clear all runs from a paragraph."""

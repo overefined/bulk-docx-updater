@@ -1,4 +1,4 @@
-# DOCX Bulk Updater
+# Bulk DOCX Updater
 
 Command-line tool to bulk update DOCX files.
 

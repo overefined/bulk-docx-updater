@@ -361,6 +361,39 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
                     logging.getLogger(__name__).error("Error: Operation %s: invalid property '%s'. Valid properties: %s", i, prop, ', '.join(valid_properties))
                     sys.exit(1)
 
+        elif op_type == 'align_table_cells':
+            # Validate align_table_cells operation
+            # Format: {"align_table_cells": {"patterns": ["pattern1", "pattern2"], "alignment": "left"}}
+            if 'value' in op and isinstance(op['value'], dict):
+                op.update(op.pop('value'))
+
+            if 'patterns' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'align_table_cells' requires 'patterns' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['patterns'], list):
+                logging.getLogger(__name__).error("Error: Operation %s: 'patterns' must be a list", i)
+                sys.exit(1)
+
+            if len(op['patterns']) == 0:
+                logging.getLogger(__name__).error("Error: Operation %s: 'patterns' must not be empty", i)
+                sys.exit(1)
+
+            for j, pattern in enumerate(op['patterns']):
+                if not isinstance(pattern, str):
+                    logging.getLogger(__name__).error("Error: Operation %s: patterns[%d] must be string", i, j)
+                    sys.exit(1)
+
+            # Validate alignment
+            if 'alignment' not in op:
+                # Default to 'left' if not specified
+                op['alignment'] = 'left'
+
+            valid_alignments = ['left', 'center', 'right', 'justify']
+            if op['alignment'] not in valid_alignments:
+                logging.getLogger(__name__).error("Error: Operation %s: 'alignment' must be one of: %s", i, ', '.join(valid_alignments))
+                sys.exit(1)
+
         else:
             logging.getLogger(__name__).error("Error: Operation %s: unsupported operation type '%s'", i, op_type)
             sys.exit(1)
@@ -467,6 +500,13 @@ def _operations_to_replacements(operations: List[Dict[str, Any]]) -> List[Dict[s
             if 'table_header' in op:
                 cfg2['table_header'] = op['table_header']
             replacements.append({'set_table_column_widths': cfg2})
+
+        elif op_type == 'align_table_cells':
+            cfg3: Dict[str, Any] = {
+                'patterns': op['patterns'],
+                'alignment': op['alignment']
+            }
+            replacements.append({'align_table_cells': cfg3})
 
         else:
             logging.getLogger(__name__).error("Unsupported operation type during conversion: %s", op_type)
@@ -588,6 +628,30 @@ def validate_replacements(replacements: List[Dict[str, Any]]) -> None:
                 sys.exit(1)
             if 'table_index' in cfg and 'table_header' in cfg:
                 logging.getLogger(__name__).error("Error: Replacement %s cannot specify both 'table_index' and 'table_header'", i)
+                sys.exit(1)
+            continue
+
+        if 'align_table_cells' in repl:
+            cfg = repl['align_table_cells']
+            if not isinstance(cfg, dict):
+                logging.getLogger(__name__).error("Error: Replacement %s invalid 'align_table_cells' config", i)
+                sys.exit(1)
+            if 'patterns' not in cfg:
+                logging.getLogger(__name__).error("Error: Replacement %s missing 'patterns' in 'align_table_cells'", i)
+                sys.exit(1)
+            if not isinstance(cfg['patterns'], list) or len(cfg['patterns']) == 0:
+                logging.getLogger(__name__).error("Error: Replacement %s 'patterns' must be non-empty list", i)
+                sys.exit(1)
+            for j, pattern in enumerate(cfg['patterns']):
+                if not isinstance(pattern, str):
+                    logging.getLogger(__name__).error("Error: Replacement %s patterns[%d] must be string", i, j)
+                    sys.exit(1)
+            if 'alignment' not in cfg:
+                logging.getLogger(__name__).error("Error: Replacement %s missing 'alignment' in 'align_table_cells'", i)
+                sys.exit(1)
+            valid_alignments = ['left', 'center', 'right', 'justify']
+            if cfg['alignment'] not in valid_alignments:
+                logging.getLogger(__name__).error("Error: Replacement %s 'alignment' must be one of: %s", i, ', '.join(valid_alignments))
                 sys.exit(1)
             continue
 

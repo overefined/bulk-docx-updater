@@ -2,7 +2,7 @@
 """
 Unit tests for table cell alignment functionality.
 
-Tests both the complex formatting token system and the simple direct approach
+Tests both the complex formatting token system and the config-driven alignment
 to ensure table cell alignment works correctly.
 """
 
@@ -15,7 +15,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.table import Table, _Row, _Cell
 
 from src.formatting import FormattingProcessor
-from simple_table_alignment import apply_table_cell_left_alignment
+from src.document_processor import DocxBulkUpdater
 
 
 class TestTableCellAlignment:
@@ -134,8 +134,8 @@ class TestTableCellAlignment:
             result = self.formatter._parse_format_options(token)
             assert result['alignment'] == expected_alignment, f"Failed for {token}"
 
-    def test_simple_table_alignment_function(self):
-        """Test the simple direct table cell alignment function."""
+    def test_config_driven_table_alignment(self):
+        """Test the config-driven table cell alignment operation."""
         # Create a temporary file
         with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as tmp_file:
             tmp_path = tmp_file.name
@@ -145,12 +145,17 @@ class TestTableCellAlignment:
             doc = self.create_test_document_with_table()
             doc.save(tmp_path)
 
-            # Apply simple table cell alignment
-            target_patterns = ["o2.phase_fmtd", "o2.ReadingTimestamp"]
-            cells_modified = apply_table_cell_left_alignment(tmp_path, target_patterns)
+            # Create updater with align_table_cells operation
+            operations = [{
+                'op': 'align_table_cells',
+                'patterns': ["o2.phase_fmtd", "o2.ReadingTimestamp"],
+                'alignment': 'left'
+            }]
+            updater = DocxBulkUpdater(operations)
 
-            # Should have modified 2 cells
-            assert cells_modified == 2
+            # Process the document
+            result = updater.modify_docx(Path(tmp_path))
+            assert result is True
 
             # Verify the changes by re-reading the document
             doc_after = Document(tmp_path)

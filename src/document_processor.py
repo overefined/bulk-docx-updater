@@ -494,6 +494,12 @@ class DocxBulkUpdater:
                     if self.replace_table_cell(doc, op):
                         modified = True
 
+            # Handle table cell alignment
+            for op in self.operations:
+                if op.get('op') == 'align_table_cells':
+                    if self.align_table_cells(doc, op):
+                        modified = True
+
             # Handle image replacements
             for op in self.operations:
                 if op.get('op') == 'replace_image':
@@ -1133,6 +1139,59 @@ class DocxBulkUpdater:
 
                 # Apply paragraph-level formatting (alignment, etc.)
                 self.formatter.apply_paragraph_formatting(para, formatting)
+
+    def align_table_cells(self, doc: Document, align_config: Dict) -> bool:
+        """Align table cells containing specific text patterns.
+
+        Args:
+            doc: The Document to modify
+            align_config: Configuration dict with keys:
+                - patterns: List of text patterns to search for in table cells
+                - alignment: Alignment to apply ('left', 'center', 'right', 'justify')
+
+        Returns:
+            True if any cells were modified, False otherwise
+        """
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        patterns = align_config['patterns']
+        alignment_str = align_config['alignment']
+
+        # Map alignment string to enum
+        alignment_map = {
+            'left': WD_ALIGN_PARAGRAPH.LEFT,
+            'center': WD_ALIGN_PARAGRAPH.CENTER,
+            'right': WD_ALIGN_PARAGRAPH.RIGHT,
+            'justify': WD_ALIGN_PARAGRAPH.JUSTIFY
+        }
+        alignment = alignment_map[alignment_str]
+
+        try:
+            cells_modified = 0
+
+            for table_idx, table in enumerate(doc.tables):
+                for row_idx, row in enumerate(table.rows):
+                    for cell_idx, cell in enumerate(row.cells):
+                        for para_idx, paragraph in enumerate(cell.paragraphs):
+                            para_text = paragraph.text.strip()
+
+                            # Check if this paragraph contains any of our target patterns
+                            if any(pattern in para_text for pattern in patterns):
+                                # Set alignment
+                                paragraph.alignment = alignment
+                                cells_modified += 1
+                                self._logger.debug(f"Set {alignment_str.upper()} alignment: Table {table_idx+1}, Row {row_idx+1}, Cell {cell_idx+1}: '{para_text[:40]}...'")
+
+            if cells_modified > 0:
+                self._logger.info(f"Applied {alignment_str} alignment to {cells_modified} table cell paragraphs")
+                return True
+            else:
+                self._logger.debug(f"No table cells found matching patterns: {patterns}")
+                return False
+
+        except Exception as e:
+            self._logger.error(f"Error applying table cell alignment: {e}")
+            return False
 
     def replace_image(self, doc: Document, image_config: Dict) -> bool:
         """Replace an image in the document with a new image file.

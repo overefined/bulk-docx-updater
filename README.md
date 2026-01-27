@@ -56,7 +56,10 @@ JSON array of operations with `op` field:
 { "op": "replace_table_cell", "table_header": "Phase, Time", "row": 0, "column": 1, "replace": "Time" }
 { "op": "set_table_column_widths", "table_header": "Phase, Time", "column_widths": [1.5, 2.0] }
 { "op": "table_header_repeat", "pattern": "Phase, Time", "enabled": true }
+{ "op": "align_table_cells", "patterns": ["text1", "text2"], "alignment": "left" }
 ```
+
+Aligns table cells containing specific text patterns. Supported alignments: `left`, `center`, `right`, `justify` (defaults to `left`).
 
 **Image replacement**
 ```json

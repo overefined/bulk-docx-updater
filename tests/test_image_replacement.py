@@ -19,7 +19,7 @@ class TestImageReplacement:
     def test_replace_first_image_by_default(self, tmp_path):
         """Test replacing the first image in a document (default behavior)."""
         # Use an actual test document with images
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -48,7 +48,7 @@ class TestImageReplacement:
         original_size = len(original_image_part._blob)
 
         # Configure replacement - replace first image (default)
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -92,7 +92,7 @@ class TestImageReplacement:
 
     def test_replace_image_by_name(self, tmp_path):
         """Test replacing an image by its name attribute."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -100,7 +100,7 @@ class TestImageReplacement:
         import shutil
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -118,7 +118,7 @@ class TestImageReplacement:
 
     def test_replace_image_by_index(self, tmp_path):
         """Test replacing an image by its index."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -126,7 +126,7 @@ class TestImageReplacement:
         import shutil
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -144,7 +144,7 @@ class TestImageReplacement:
 
     def test_replace_image_by_alt_text(self, tmp_path):
         """Test replacing an image by its alt text."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -152,7 +152,7 @@ class TestImageReplacement:
         import shutil
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -170,7 +170,7 @@ class TestImageReplacement:
 
     def test_replace_nonexistent_image(self, tmp_path):
         """Test handling of replacement when image file doesn't exist."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -192,7 +192,7 @@ class TestImageReplacement:
 
     def test_replace_image_with_invalid_name(self, tmp_path):
         """Test handling when specified image name doesn't exist."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -200,7 +200,7 @@ class TestImageReplacement:
         import shutil
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -219,7 +219,7 @@ class TestImageReplacement:
 
     def test_replace_image_with_invalid_index(self, tmp_path):
         """Test handling when specified index is out of range."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -227,7 +227,7 @@ class TestImageReplacement:
         import shutil
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -246,7 +246,7 @@ class TestImageReplacement:
 
     def test_config_integration(self, tmp_path):
         """Test image replacement through config file integration."""
-        source_doc = Path("profile_test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
@@ -254,7 +254,7 @@ class TestImageReplacement:
         import shutil
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("profile_test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 

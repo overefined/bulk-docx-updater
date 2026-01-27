@@ -17,7 +17,7 @@ from src.config import load_operations_from_json
 class DocxProfiler:
     """Performance profiler for DOCX bulk updater operations."""
     
-    def __init__(self, config_file: str = "replace.json", test_dir: str = "profile_test_templates"):
+    def __init__(self, config_file: str = "replace.json", test_dir: str = "test_templates"):
         self.config_file = Path(config_file)
         self.test_dir = Path(test_dir)
         self.updater = None

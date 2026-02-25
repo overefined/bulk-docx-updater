@@ -394,6 +394,47 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
                 logging.getLogger(__name__).error("Error: Operation %s: 'alignment' must be one of: %s", i, ', '.join(valid_alignments))
                 sys.exit(1)
 
+        elif op_type == 'replace_in_table':
+            # Validate replace_in_table operation
+            # Format: {"replace_in_table": {"table_heading": "O2 VALUES", "search": "old", "replace": "new"}}
+            if 'value' in op and isinstance(op['value'], dict):
+                op.update(op.pop('value'))
+
+            # Required fields
+            if 'table_heading' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace_in_table' requires 'table_heading' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['table_heading'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'table_heading' must be string", i)
+                sys.exit(1)
+
+            if 'search' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace_in_table' requires 'search' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['search'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'search' must be string", i)
+                sys.exit(1)
+
+            if 'replace' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace_in_table' requires 'replace' field", i)
+                sys.exit(1)
+
+            if not isinstance(op['replace'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace' must be string", i)
+                sys.exit(1)
+
+            # Optional fields
+            if 'regex' in op and not isinstance(op['regex'], bool):
+                logging.getLogger(__name__).error("Error: Operation %s: 'regex' must be boolean", i)
+                sys.exit(1)
+
+            # Optional table_index for disambiguation
+            if 'table_index' in op and not isinstance(op['table_index'], int):
+                logging.getLogger(__name__).error("Error: Operation %s: 'table_index' must be integer", i)
+                sys.exit(1)
+
         else:
             logging.getLogger(__name__).error("Error: Operation %s: unsupported operation type '%s'", i, op_type)
             sys.exit(1)

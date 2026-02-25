@@ -1,12 +1,3 @@
 [
-  {
-    "op": "replace",
-    "search": ", Unit {{ test.getTestLocationUnit() }}",
-    "replace": ""
-  },
-  {
-    "op": "replace",
-    "search": ", {{ test.getDriverSerialNumber() }}",
-    "replace": ", Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}"
-  }
+  { "op": "replace", "search": "getCustomerContact", "replace": "getTestContact" }
 ]

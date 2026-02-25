@@ -506,6 +506,12 @@ class DocxBulkUpdater:
                     if self.replace_image(doc, op):
                         modified = True
 
+            # Handle table-specific text replacements
+            for op in self.operations:
+                if op.get('op') == 'replace_in_table':
+                    if self.replace_text_in_table(doc, op):
+                        modified = True
+
             # Then do the text replacements and inserts
             has_search_ops = any(op.get('op') in ('replace', 'xml_replace') for op in self.operations)
 
@@ -1470,3 +1476,102 @@ class DocxBulkUpdater:
 
         self._logger.info(f"Replaced image (name: {docPr.get('name')}) with {image_path}")
         return True
+
+    def replace_text_in_table(self, doc: Document, replace_config: Dict) -> bool:
+        """Replace text only within a specific table identified by its heading.
+
+        Args:
+            doc: The Document to modify
+            replace_config: Configuration dict with keys:
+                - table_heading: Header text to match for finding table (required)
+                - search: Text to search for (required)
+                - replace: Replacement text (required)
+                - regex: Whether to use regex (optional, default: False)
+                - table_index: Zero-based table index for disambiguation (optional)
+
+        Returns:
+            True if replacement was made, False otherwise
+        """
+        table_heading = replace_config['table_heading']
+        search_text = replace_config['search']
+        replace_text = replace_config['replace']
+        use_regex = replace_config.get('regex', False)
+        table_index_hint = replace_config.get('table_index')
+
+        try:
+            # Find the target table by heading
+            target_table = None
+            target_table_index = None
+
+            matching_tables = []
+            for i, table in enumerate(doc.tables):
+                if len(table.rows) > 0:
+                    # Check if header row matches the specified header pattern
+                    header_row = table.rows[0]
+
+                    # Try exact match first (tab-separated or comma-separated)
+                    header_text_tab = '\t'.join(cell.text.strip() for cell in header_row.cells)
+                    header_text_comma = ', '.join(cell.text.strip() for cell in header_row.cells)
+                    header_text_space = ' '.join(cell.text.strip() for cell in header_row.cells)
+
+                    if (table_heading == header_text_tab or
+                        table_heading == header_text_comma or
+                        table_heading == header_text_space or
+                        table_heading in header_text_space):  # Fallback to contains for partial matches
+                        matching_tables.append((i, table))
+
+            if not matching_tables:
+                self._logger.warning(f"No table found with heading matching '{table_heading}'")
+                return False
+
+            # If table_index is specified and matches one of our candidates, use it
+            if table_index_hint is not None:
+                for i, table in matching_tables:
+                    if i == table_index_hint:
+                        target_table = table
+                        target_table_index = i
+                        break
+
+                if target_table is None:
+                    self._logger.warning(f"Table index {table_index_hint} does not match any table with heading '{table_heading}'")
+                    return False
+            else:
+                # Use the first matching table
+                target_table_index, target_table = matching_tables[0]
+
+                if len(matching_tables) > 1:
+                    self._logger.info(f"Multiple tables found with heading '{table_heading}', using the first one (index {target_table_index})")
+
+            # Now apply text replacement to all cells in this table
+            modified = False
+            cells_modified = 0
+
+            for row_idx, row in enumerate(target_table.rows):
+                for cell_idx, cell in enumerate(row.cells):
+                    for para_idx, paragraph in enumerate(cell.paragraphs):
+                        # Check if this paragraph contains the search text
+                        if search_text in paragraph.text:
+                            # Create a temporary operation for this replacement
+                            temp_op = {
+                                'op': 'replace',
+                                'search': search_text,
+                                'replace': replace_text,
+                                'regex': use_regex
+                            }
+
+                            # Use the text replacer with just this operation
+                            temp_replacer = TextReplacer([temp_op], self.formatter)
+
+                            if temp_replacer.replace_text_in_paragraph(paragraph):
+                                cells_modified += 1
+                                modified = True
+                                self._logger.debug(f"Replaced in table '{table_heading}' (index {target_table_index}), row {row_idx}, cell {cell_idx}")
+
+            if modified:
+                self._logger.info(f"Replaced '{search_text}' with '{replace_text}' in {cells_modified} cell(s) of table '{table_heading}'")
+
+            return modified
+
+        except Exception as e:
+            self._logger.error(f"Error replacing text in table: {e}")
+            return False

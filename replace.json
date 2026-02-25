@@ -1,12 +1,4 @@
 [
-  {
-    "op": "replace",
-    "search": ", Unit {{ test.getTestLocationUnit() }}",
-    "replace": ""
-  },
-  {
-    "op": "replace",
-    "search": ", {{ test.getDriverSerialNumber() }}",
-    "replace": ", Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}"
-  }
+  { "op": "replace", "search": "ReturnN22", "replace": "ReturnN2ETH" },
+  { "op": "replace", "search": "ReturnN25", "replace": "ReturnN2THC1" }
 ]

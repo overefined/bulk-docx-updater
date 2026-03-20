@@ -1026,6 +1026,7 @@ class DocxBulkUpdater:
         expected_content = cell_config.get('search')
         table_index = cell_config.get('table_index')
         table_header = cell_config.get('table_header')
+        header_row_index = cell_config.get('header_row', 0)
 
         try:
             if table_index is not None:
@@ -1042,25 +1043,26 @@ class DocxBulkUpdater:
                 target_table_index = None
 
                 for i, table in enumerate(doc.tables):
-                    if len(table.rows) > 0:
-                        # Check if header row matches the specified header pattern
-                        header_row = table.rows[0]
+                    if len(table.rows) <= header_row_index:
+                        continue
+                    # Check if header row matches the specified header pattern
+                    match_row = table.rows[header_row_index]
 
-                        # Try exact match first (tab-separated or comma-separated)
-                        header_text_tab = '\t'.join(cell.text.strip() for cell in header_row.cells)
-                        header_text_comma = ', '.join(cell.text.strip() for cell in header_row.cells)
-                        header_text_space = ' '.join(cell.text.strip() for cell in header_row.cells)
+                    # Try exact match first (tab-separated or comma-separated)
+                    header_text_tab = '\t'.join(cell.text.strip() for cell in match_row.cells)
+                    header_text_comma = ', '.join(cell.text.strip() for cell in match_row.cells)
+                    header_text_space = ' '.join(cell.text.strip() for cell in match_row.cells)
 
-                        if (table_header == header_text_tab or
-                            table_header == header_text_comma or
-                            table_header == header_text_space or
-                            table_header in header_text_space):  # Fallback to contains for partial matches
-                            target_table = table
-                            target_table_index = i
-                            break
+                    if (table_header == header_text_tab or
+                        table_header == header_text_comma or
+                        table_header == header_text_space or
+                        table_header in header_text_space):  # Fallback to contains for partial matches
+                        target_table = table
+                        target_table_index = i
+                        break
 
                 if target_table is None:
-                    self._logger.warning(f"No table found with header matching '{table_header}'")
+                    self._logger.warning(f"No table found with header matching '{table_header}' in row {header_row_index}")
                     return False
             else:
                 # Default to first table if no specification provided

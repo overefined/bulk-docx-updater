@@ -1,8 +1,9 @@
-source .venv/bin/activate
-python3 main.py /mnt/c/Development/scripts/docx-templates/test/FTIR_Method_2_20250617.docx --show-xml > xml
+python main.py "C:\Development\scripts\docx-templates\templates" -c replace.json
 
-python main.py "C:\Development\scripts\docx-templates\test" -c replace.json
-python main.py /mnt/c/Development/scripts/docx-templates/test -c replace.json
+source .venv/bin/activate
+python main.py /mnt/c/Development/scripts/docx-templates/templates -c replace.json
+
+python3 main.py /mnt/c/Development/scripts/docx-templates/templates/FTIR_Method_2_20250617.docx --show-xml > xml
 
 scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Report Templates\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
 ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180

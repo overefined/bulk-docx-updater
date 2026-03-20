@@ -54,6 +54,8 @@ JSON array of operations with `op` field:
 **Table operations**
 ```json
 { "op": "replace_table_cell", "table_header": "Phase, Time", "row": 0, "column": 1, "replace": "Time" }
+{ "op": "replace_table_cell", "table_header": "Col1, Col2", "header_row": 1, "row": 0, "column": 0, "replace": "New Title" }
+{ "op": "replace_table_cell", "table_index": 2, "row": 0, "column": 0, "replace": "New Title" }
 { "op": "set_table_column_widths", "table_header": "Phase, Time", "column_widths": [1.5, 2.0] }
 { "op": "table_header_repeat", "pattern": "Phase, Time", "enabled": true }
 { "op": "align_table_cells", "patterns": ["text1", "text2"], "alignment": "left" }

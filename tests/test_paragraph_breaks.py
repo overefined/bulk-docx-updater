@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 
 from src.document_processor import DocxBulkUpdater
-from src.config import load_replacements_from_json, validate_replacements
+from src.config import load_operations_from_json, validate_operations
 
 
 class TestParagraphBreakEndToEnd:
@@ -26,33 +26,27 @@ class TestParagraphBreakEndToEnd:
     
     def test_paragraphbreak_config_loading_and_validation(self):
         """Test that paragraph break configurations load and validate correctly."""
-        config_data = [
-            {
-                "op": "replace",
-                "search": "SITE PHOTOS",
-                "replace": "SITE PHOTOSpagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"
-            },
-            {
-                "op": "replace",
-                "search": "TEST RESULTS",
-                "replace": "Result1paragraphbreakResult2paragraphbreakResult3"
-            }
-        ]
-        
+        config_data = {
+            "replace": [
+                ["SITE PHOTOS", "SITE PHOTOSpagebreak{format:center,size12}Photo1paragraphbreakPhoto2paragraphbreakPhoto3{/format}"],
+                ["TEST RESULTS", "Result1paragraphbreakResult2paragraphbreakResult3"]
+            ]
+        }
+
         # Write config file
         config_file = self.temp_dir / "test_config.json"
         with open(config_file, 'w') as f:
             json.dump(config_data, f)
-        
+
         # Load and validate
-        replacements = load_replacements_from_json(config_file)
-        validate_replacements(replacements)  # Should not raise
-        
-        assert len(replacements) == 2
-        assert replacements[0]["search"] == "SITE PHOTOS"
-        assert "paragraphbreak" in replacements[0]["replace"]
-        assert replacements[1]["search"] == "TEST RESULTS"
-        assert "paragraphbreak" in replacements[1]["replace"]
+        operations, _ = load_operations_from_json(config_file)
+        validate_operations(operations)  # Should not raise
+
+        assert len(operations) == 2
+        assert operations[0]["search"] == "SITE PHOTOS"
+        assert "paragraphbreak" in operations[0]["replace"]
+        assert operations[1]["search"] == "TEST RESULTS"
+        assert "paragraphbreak" in operations[1]["replace"]
     
     def test_docx_bulk_updater_with_paragraphbreaks(self):
         """Test DocxBulkUpdater initialization with paragraph break replacements."""

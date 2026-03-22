@@ -262,19 +262,19 @@ class TestImageReplacement:
         absolute_image_path = replacement_image.absolute()
 
         # Create config file
-        config_content = f"""[
-  {{
-    "op": "replace_image",
-    "image_path": "{str(absolute_image_path).replace(chr(92), chr(92)+chr(92))}",
-    "name": "Picture 2"
-  }}
-]"""
+        config_data = {
+            "replace_image": [{
+                "image_path": str(absolute_image_path),
+                "name": "Picture 2"
+            }]
+        }
 
         config_file = tmp_path / "test_config.json"
-        config_file.write_text(config_content)
+        import json
+        config_file.write_text(json.dumps(config_data))
 
         # Load config and apply replacement
-        operations = load_operations_from_json(config_file)
+        operations, _ = load_operations_from_json(config_file)
         processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 

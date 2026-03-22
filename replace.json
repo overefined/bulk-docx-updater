@@ -1,6 +1,8 @@
-[
-  { "op": "replace", "search": "ReturnTHC1_seconds", "replace": "ReturnTHC_seconds" },
-  { "op": "replace", "search": "ReturnN2THC1_THCseconds", "replace": "ReturnN2THC_THCseconds" },
-  { "op": "replace", "search": "ReturnN2ETH_THCseconds", "replace": "ReturnN2THC_THCseconds" },
-  { "op": "replace", "search": "ReturnN22_THCseconds", "replace": "ReturnTHC_seconds" }
-]
+{
+  "replace": [
+    ["ReturnTHC1_seconds", "ReturnTHC_seconds"],
+    ["ReturnN2THC1_THCseconds", "ReturnN2THC_THCseconds"],
+    ["ReturnN2ETH_THCseconds", "ReturnN2THC_THCseconds"],
+    ["ReturnN22_THCseconds", "ReturnTHC_seconds"]
+  ]
+}

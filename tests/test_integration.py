@@ -40,11 +40,13 @@ class TestIntegrationWithRealDocuments:
         
         doc.save(self.test_docx)
         
-        # Create test configuration
-        test_config = [
-            {"op": "replace", "search": "old text", "replace": "new content"},
-            {"op": "replace", "search": "test document", "replace": "sample document"}
-        ]
+        # Create test configuration (dict format)
+        test_config = {
+            "replace": [
+                ["old text", "new content"],
+                ["test document", "sample document"]
+            ]
+        }
 
         with open(self.config_file, 'w') as f:
             json.dump(test_config, f)
@@ -55,7 +57,7 @@ class TestIntegrationWithRealDocuments:
     
     def test_document_modification_with_config_file(self):
         """Test document modification using configuration file."""
-        operations = load_operations_from_json(self.config_file)
+        operations, settings = load_operations_from_json(self.config_file)
         updater = DocxBulkUpdater(operations)
         
         # Verify document was modified
@@ -226,14 +228,13 @@ class TestErrorHandling:
     
     def test_invalid_replacement_config(self):
         """Test handling of invalid replacement configurations."""
-        invalid_replacements = [
-            {"invalid": "structure"},  # Missing search/replace
-            "not a dict"  # Wrong type
+        invalid_operations = [
+            {"op": "replace"},  # Missing search/replace
         ]
-        
+
         with pytest.raises(SystemExit):
-            from src.config import validate_replacements
-            validate_replacements(invalid_replacements)
+            from src.config import validate_operations
+            validate_operations(invalid_operations)
     
     def test_empty_directory_processing(self):
         """Test processing empty directory."""

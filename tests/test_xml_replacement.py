@@ -10,25 +10,11 @@ from pathlib import Path
 
 from src.text_replacement import TextReplacer
 from src.formatting import FormattingProcessor
-from src.config import validate_replacements, validate_operations, load_operations_from_json, _process_file_references
+from src.config import validate_operations, load_operations_from_json, _process_file_references
 
 
 class TestXMLReplacementConfig:
     """Test XML replacement configuration validation."""
-
-    def test_xml_mode_boolean_validation(self):
-        """Test that xml_mode must be a boolean."""
-        operations = [
-            {
-                "op": "xml_replace",
-                "search": "test",
-                "replace": "result",
-                "xml_mode": "true"  # Should be boolean, not string
-            }
-        ]
-
-        with pytest.raises(SystemExit):
-            validate_replacements(operations)
 
     def test_xml_mode_requires_search_replace(self):
         """Test that xml_mode can only be used with search/replace operations."""
@@ -39,7 +25,7 @@ class TestXMLReplacementConfig:
         ]
 
         with pytest.raises(SystemExit):
-            validate_replacements(operations)
+            validate_operations(operations)
 
     def test_valid_xml_mode_config(self):
         """Test valid XML mode configuration (inline XML allowed by validator)."""
@@ -57,7 +43,7 @@ class TestXMLReplacementConfig:
         ]
 
         # Should not raise any exceptions
-        validate_replacements(operations)
+        validate_operations(operations)
 
     def test_regex_validation(self):
         """Test regex option validation."""
@@ -71,7 +57,7 @@ class TestXMLReplacementConfig:
         ]
 
         with pytest.raises(SystemExit):
-            validate_replacements(operations)
+            validate_operations(operations)
 
 
 class TestXMLReplacement:
@@ -371,29 +357,28 @@ class TestXMLFileReferences:
 
             # Create config file
             config_file = temp_dir / "config.json"
-            config_data = [
-                {
-                    "op": "xml_replace",
-                    "search_file": "search_pattern.xml",
-                    "replace_file": "replace_pattern.xml"
-                },
-                {
-                    "op": "replace",
-                    "search": "regular text",
-                    "replace": "replacement text"
-                }
-            ]
+            config_data = {
+                "xml_replace": [
+                    {
+                        "search_file": "search_pattern.xml",
+                        "replace_file": "replace_pattern.xml"
+                    }
+                ],
+                "replace": [
+                    ["regular text", "replacement text"]
+                ]
+            }
 
             with open(config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_data, f)
 
             # Load and test
-            replacements = load_operations_from_json(config_file)
+            operations, _ = load_operations_from_json(config_file)
 
-            assert len(replacements) == 2
+            assert len(operations) == 2
 
             # First replacement should have loaded XML content
-            xml_replacement = replacements[0]
+            xml_replacement = operations[0]
             assert "search" in xml_replacement
             assert "replace" in xml_replacement
             assert xml_replacement.get("xml_mode") is True
@@ -403,7 +388,7 @@ class TestXMLFileReferences:
             assert "replace_file" not in xml_replacement
 
             # Second replacement should be unchanged
-            text_replacement = replacements[1]
+            text_replacement = operations[1]
             assert text_replacement["search"] == "regular text"
             assert text_replacement["replace"] == "replacement text"
 

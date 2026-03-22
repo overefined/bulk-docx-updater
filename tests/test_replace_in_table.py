@@ -5,6 +5,7 @@ Tests the replace_in_table operation that allows targeting specific
 tables by heading for scoped text replacement.
 """
 import pytest
+import json
 from pathlib import Path
 from docx import Document
 
@@ -265,20 +266,19 @@ class TestReplaceInTable:
         doc.save(test_file)
 
         # Create config file
-        config_content = """[
-  {
-    "op": "replace_in_table",
-    "table_heading": "O2 VALUES",
-    "search": "{{ o2_qaqc.O2Low_cal_span }}",
-    "replace": "20.95"
-  }
-]"""
+        config_data = {
+            "replace_in_table": [{
+                "table_heading": "O2 VALUES",
+                "search": "{{ o2_qaqc.O2Low_cal_span }}",
+                "replace": "20.95"
+            }]
+        }
 
         config_file = tmp_path / "test_config.json"
-        config_file.write_text(config_content)
+        config_file.write_text(json.dumps(config_data))
 
         # Load config and apply replacements
-        operations = load_operations_from_json(config_file)
+        operations, _ = load_operations_from_json(config_file)
         processor = DocxBulkUpdater(operations)
         result = processor.modify_docx(test_file)
 

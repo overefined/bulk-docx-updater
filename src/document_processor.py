@@ -5,6 +5,7 @@ Contains the DocxBulkUpdater class and methods for document-level operations
 like margin standardization, paragraph cleanup, and change preview.
 """
 from __future__ import annotations
+import re
 import difflib
 import tempfile
 import shutil
@@ -1552,7 +1553,7 @@ class DocxBulkUpdater:
                 for cell_idx, cell in enumerate(row.cells):
                     for para_idx, paragraph in enumerate(cell.paragraphs):
                         # Check if this paragraph contains the search text
-                        if search_text in paragraph.text:
+                        if (use_regex and re.search(search_text, paragraph.text)) or (not use_regex and search_text in paragraph.text):
                             # Create a temporary operation for this replacement
                             temp_op = {
                                 'op': 'replace',

@@ -300,7 +300,7 @@ class TestConfigurationWithRealTemplates:
         if not config_path.exists():
             pytest.skip("replace.json not found")
         
-        operations = load_operations_from_json(config_path)
+        operations, settings = load_operations_from_json(config_path)
         updater = DocxBulkUpdater(operations)
         
         # Test dry run

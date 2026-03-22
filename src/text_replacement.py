@@ -754,7 +754,7 @@ class TextReplacer:
             return False
 
         # Quick check: does this paragraph contain any of our search patterns?
-        has_any_matches = any(pattern in full_text for pattern in self._search_patterns_set)
+        has_any_matches = any(p.search(full_text) for p in self._compiled_patterns.values())
         if not has_any_matches:
             return False
 

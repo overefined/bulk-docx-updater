@@ -1,8 +1,6 @@
 {
   "replace": [
-    ["ReturnTHC1_seconds", "ReturnTHC_seconds"],
-    ["ReturnN2THC1_THCseconds", "ReturnN2THC_THCseconds"],
-    ["ReturnN2ETH_THCseconds", "ReturnN2THC_THCseconds"],
-    ["ReturnN22_THCseconds", "ReturnTHC_seconds"]
+    ["{% if ftir_photos != none %}{% for img in ftir_photos.site_photos %}{{ img }}{% endfor %}{% endif %}", "{% if ftir_photos != none %}{% for img in ftir_photos.site_photos %}{{ img }}{% endfor %}{% endif %}"],
+    ["{% if ecom_photos != none %}{% for img in ecom_photos.site_photos %}{{ img }}{% endfor %}{% endif %}", "{% if ecom_photos != none %}{% for img in ecom_photos.site_photos %}{{ img }}{% endfor %}{% endif %}"]
   ]
 }

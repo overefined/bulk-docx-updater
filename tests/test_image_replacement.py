@@ -16,16 +16,48 @@ from src.config import load_operations_from_json
 class TestImageReplacement:
     """Test cases for image replacement functionality."""
 
+    TEMPLATES_DIR = Path("/mnt/c/Development/scripts/docx-templates/templates")
+    REPLACEMENT_IMAGE = Path("/mnt/c/Development/scripts/docx-templates/Alliance-logo_LG_cropped.png")
+
+    def find_source_doc(self) -> Path:
+        """Find any available docx in the test templates directory."""
+        matches = sorted(self.TEMPLATES_DIR.glob("*.docx"))
+        if not matches:
+            pytest.skip("No test document found in test_templates/")
+        return matches[0]
+
+    def get_image_names(self, doc_path: Path) -> list[str]:
+        """Return the name attributes of all images in a document."""
+        doc = Document(doc_path)
+        names = []
+        for para in doc.paragraphs:
+            for run in para.runs:
+                for drawing in run._element.iter(qn('wp:docPr')):
+                    name = drawing.get('name')
+                    if name:
+                        names.append(name)
+        return names
+
+    def get_image_alt_texts(self, doc_path: Path) -> list[str]:
+        """Return the alt text (descr) of all images in a document."""
+        doc = Document(doc_path)
+        alt_texts = []
+        for para in doc.paragraphs:
+            for run in para.runs:
+                for drawing in run._element.iter(qn('wp:docPr')):
+                    descr = drawing.get('descr')
+                    if descr:
+                        alt_texts.append(descr)
+        return alt_texts
+
     def test_replace_first_image_by_default(self, tmp_path):
         """Test replacing the first image in a document (default behavior)."""
-        # Use an actual test document with images
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
+        source_doc = self.find_source_doc()
         if not source_doc.exists():
             pytest.skip("Test document not found")
 
-        # Copy to temporary location for testing
-        test_file = tmp_path / "test_doc.docx"
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
         # Get original image info
@@ -47,8 +79,7 @@ class TestImageReplacement:
         assert original_image_part is not None, "No image found in test document"
         original_size = len(original_image_part._blob)
 
-        # Configure replacement - replace first image (default)
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -92,23 +123,22 @@ class TestImageReplacement:
 
     def test_replace_image_by_name(self, tmp_path):
         """Test replacing an image by its name attribute."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
-        # Replace by name "Picture 2"
+        names = self.get_image_names(test_file)
+        if not names:
+            pytest.skip("No named images found in test document")
         operations = [{
             'op': 'replace_image',
             'image_path': str(replacement_image),
-            'name': 'Picture 2'
+            'name': names[0]
         }]
 
         processor = DocxBulkUpdater(operations)
@@ -118,15 +148,12 @@ class TestImageReplacement:
 
     def test_replace_image_by_index(self, tmp_path):
         """Test replacing an image by its index."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -144,23 +171,22 @@ class TestImageReplacement:
 
     def test_replace_image_by_alt_text(self, tmp_path):
         """Test replacing an image by its alt text."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
-        # The second image has alt text "R:\Diagrams\SampleTrain.jpg"
+        alt_texts = self.get_image_alt_texts(test_file)
+        if not alt_texts:
+            pytest.skip("No images with alt text found in test document")
         operations = [{
             'op': 'replace_image',
             'image_path': str(replacement_image),
-            'alt_text': 'R:\\Diagrams\\SampleTrain.jpg'
+            'alt_text': alt_texts[0]
         }]
 
         processor = DocxBulkUpdater(operations)
@@ -170,12 +196,9 @@ class TestImageReplacement:
 
     def test_replace_nonexistent_image(self, tmp_path):
         """Test handling of replacement when image file doesn't exist."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
         # Try to replace with non-existent image
@@ -192,15 +215,12 @@ class TestImageReplacement:
 
     def test_replace_image_with_invalid_name(self, tmp_path):
         """Test handling when specified image name doesn't exist."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -219,15 +239,12 @@ class TestImageReplacement:
 
     def test_replace_image_with_invalid_index(self, tmp_path):
         """Test handling when specified index is out of range."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -246,15 +263,12 @@ class TestImageReplacement:
 
     def test_config_integration(self, tmp_path):
         """Test image replacement through config file integration."""
-        source_doc = Path("test_templates/FTIR_Method_19_20240912.docx")
-        if not source_doc.exists():
-            pytest.skip("Test document not found")
-
-        test_file = tmp_path / "test_doc.docx"
+        source_doc = self.find_source_doc()
         import shutil
+        test_file = tmp_path / source_doc.name
         shutil.copy2(source_doc, test_file)
 
-        replacement_image = Path("test_templates/Alliance-logo_LG_cropped.png")
+        replacement_image = self.REPLACEMENT_IMAGE
         if not replacement_image.exists():
             pytest.skip("Replacement image not found")
 
@@ -262,10 +276,13 @@ class TestImageReplacement:
         absolute_image_path = replacement_image.absolute()
 
         # Create config file
+        names = self.get_image_names(test_file)
+        if not names:
+            pytest.skip("No named images found in test document")
         config_data = {
             "replace_image": [{
                 "image_path": str(absolute_image_path),
-                "name": "Picture 2"
+                "name": names[0]
             }]
         }
 

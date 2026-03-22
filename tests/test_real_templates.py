@@ -18,34 +18,38 @@ from src.config import load_operations_from_json
 
 class TestRealTemplateProcessing:
     """Tests using actual DOCX templates from the templates directory."""
-    
+
     TEMPLATES_DIR = Path("/mnt/c/Development/scripts/docx-templates/templates")
-    
+
     def setup_method(self):
         """Set up test fixtures with temporary directory."""
         self.temp_dir = Path(tempfile.mkdtemp())
-        
+
         # Skip tests if templates directory doesn't exist
         if not self.TEMPLATES_DIR.exists():
             pytest.skip(f"Templates directory not found: {self.TEMPLATES_DIR}")
-    
+
     def teardown_method(self):
         """Clean up temporary files."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-    
-    def copy_template(self, template_name: str) -> Path:
-        """Copy a template to temp directory for testing."""
-        template_path = self.TEMPLATES_DIR / template_name
-        if not template_path.exists():
-            pytest.skip(f"Template not found: {template_path}")
-        
-        temp_template = self.temp_dir / template_name
+
+    def find_template(self, pattern: str = "*.docx") -> Path:
+        """Find the first template matching a glob pattern."""
+        matches = sorted(self.TEMPLATES_DIR.glob(pattern))
+        if not matches:
+            pytest.skip(f"No template matching '{pattern}' found in {self.TEMPLATES_DIR}")
+        return matches[0]
+
+    def copy_template(self, pattern: str = "*.docx") -> Path:
+        """Copy the first template matching a glob pattern to temp directory for testing."""
+        template_path = self.find_template(pattern)
+        temp_template = self.temp_dir / template_path.name
         shutil.copy2(template_path, temp_template)
         return temp_template
     
     def test_hyperlink_detection_skips_appendix_list(self):
         """Test that hyperlink detection correctly skips appendix list entries."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         # Use the actual replacement from replace.json
         operations = [
@@ -75,7 +79,7 @@ class TestRealTemplateProcessing:
     
     def test_tester_qualifications_replacement_ecom_template(self):
         """Test TESTER QUALIFICATIONS replacement with formatting."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {
@@ -100,7 +104,7 @@ class TestRealTemplateProcessing:
     
     def test_bracket_removal_ecom_template(self):
         """Test removing bracketed text like ' (0.84)'."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {"op": "replace", "search": " (0.84)", "replace": ""}
@@ -122,7 +126,7 @@ class TestRealTemplateProcessing:
     
     def test_remove_empty_paragraphs_after_replacement(self):
         """Test the remove_empty_paragraphs_after functionality."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {
@@ -143,7 +147,7 @@ class TestRealTemplateProcessing:
     
     def test_ftir_template_processing(self):
         """Test processing FTIR template with common replacements."""
-        template_path = self.copy_template("FTIR_1x21min_20240619.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {"op": "replace", "search": "old_placeholder", "replace": "new_value"},
@@ -161,7 +165,7 @@ class TestRealTemplateProcessing:
     
     def test_margin_standardization_on_real_template(self):
         """Test margin standardization on actual template."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         custom_margins = {'top': 0.75, 'bottom': 0.75, 'left': 1.0, 'right': 1.0}
         operations = []  # No text replacements
@@ -183,7 +187,7 @@ class TestRealTemplateProcessing:
     
     def test_complex_formatting_on_real_template(self):
         """Test complex formatting tokens on actual template."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {
@@ -202,7 +206,7 @@ class TestRealTemplateProcessing:
     
     def test_table_content_replacement_real_template(self):
         """Test table content replacement on real template."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {"op": "replace", "search": "Table", "replace": "Modified Table"},
@@ -222,17 +226,16 @@ class TestRealTemplateProcessing:
     
     def test_multiple_templates_batch_processing(self):
         """Test processing multiple real templates in batch."""
-        templates = ["ECOM_1x21min_20250510.docx", "FTIR_1x21min_20240619.docx"]
-        copied_templates = []
-        
-        for template_name in templates:
-            try:
-                copied_templates.append(self.copy_template(template_name))
-            except pytest.skip.Exception:
-                continue  # Skip if template doesn't exist
-        
-        if not copied_templates:
+        all_templates = sorted(self.TEMPLATES_DIR.glob("*.docx"))
+        if not all_templates:
             pytest.skip("No templates available for batch testing")
+
+        # Use up to two templates to keep the test fast
+        copied_templates = []
+        for template_path in all_templates[:2]:
+            temp_template = self.temp_dir / template_path.name
+            shutil.copy2(template_path, temp_template)
+            copied_templates.append(temp_template)
         
         operations = [
             {"op": "replace", "search": "test_value", "replace": "production_value"}
@@ -250,7 +253,7 @@ class TestRealTemplateProcessing:
     
     def test_split_text_across_runs(self):
         """Test handling of text split across multiple DOCX runs."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         # Look for text that might be split across runs
         operations = [
@@ -270,30 +273,30 @@ class TestRealTemplateProcessing:
 
 class TestConfigurationWithRealTemplates:
     """Test configuration file handling with real templates."""
-    
+
     TEMPLATES_DIR = Path("/mnt/c/Development/scripts/docx-templates/templates")
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.temp_dir = Path(tempfile.mkdtemp())
-        
+
         if not self.TEMPLATES_DIR.exists():
             pytest.skip(f"Templates directory not found: {self.TEMPLATES_DIR}")
-    
+
     def teardown_method(self):
         """Clean up temporary files."""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
-    
+
     def test_actual_replace_json_config(self):
         """Test using the actual replace.json configuration file."""
-        # Copy a template
-        template_path = self.temp_dir / "test_template.docx"
-        original_template = self.TEMPLATES_DIR / "ECOM_1x21min_20250510.docx"
-        
-        if original_template.exists():
-            shutil.copy2(original_template, template_path)
-        else:
-            pytest.skip("ECOM template not found")
+        # Pick the first available template
+        available = sorted(self.TEMPLATES_DIR.glob("*.docx"))
+        if not available:
+            pytest.skip("No templates found")
+        original_template = available[0]
+
+        template_path = self.temp_dir / original_template.name
+        shutil.copy2(original_template, template_path)
         
         # Use the actual configuration file
         config_path = Path("/mnt/c/Development/scripts/docx-templates/bulk-docx-updater/replace.json")
@@ -326,7 +329,7 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
 
     def test_dry_run_preview_functionality(self):
         """Test dry run preview without modifying documents."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {"op": "replace", "search": "Test", "replace": "Analysis"}
@@ -350,7 +353,7 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
     
     def test_no_changes_scenario(self):
         """Test behavior when no replacements are found."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         operations = [
             {"op": "replace", "search": "NONEXISTENT_TEXT_12345", "replace": "REPLACEMENT"}
@@ -363,7 +366,7 @@ class TestAdditionalRealTemplateFeatures(TestRealTemplateProcessing):
     
     def test_headers_and_footers_processing(self):
         """Test that headers and footers are processed for replacements."""
-        template_path = self.copy_template("ECOM_1x21min_20250510.docx")
+        template_path = self.copy_template("*.docx")
         
         # Many DOCX templates have standard headers/footers
         operations = [

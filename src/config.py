@@ -298,6 +298,14 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
             if 'regex' in op and not isinstance(op['regex'], bool):
                 logging.getLogger(__name__).error("Error: Operation %s: 'regex' must be boolean", i)
                 sys.exit(1)
+            if 'count' in op:
+                if not isinstance(op['count'], int) or op['count'] < 0:
+                    logging.getLogger(__name__).error("Error: Operation %s: 'count' must be non-negative integer", i)
+                    sys.exit(1)
+            if 'occurrence' in op:
+                if not isinstance(op['occurrence'], int) or op['occurrence'] < 1:
+                    logging.getLogger(__name__).error("Error: Operation %s: 'occurrence' must be positive integer (1-based)", i)
+                    sys.exit(1)
             if op_type == 'xml_replace':
                 op['xml_mode'] = True
 

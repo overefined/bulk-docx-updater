@@ -74,6 +74,16 @@ Dict form also accepted per-entry:
 { "replace": [{"search": "old", "replace": "new", "regex": true}] }
 ```
 
+**Limiting replacements:**
+
+- `count`: Maximum number of replacements (default: 0 = unlimited)
+- `occurrence`: Target a specific match (1-based). `1` = first match only, `2` = second only, etc.
+
+```json
+{ "replace": [{"search": "Address", "replace": "123 Main St", "occurrence": 1}] }
+{ "replace": [{"search": "Address", "replace": "City, ST 12345", "occurrence": 2}] }
+```
+
 **Replace XML**
 ```json
 { "xml_replace": [{"search": "<w:t>old</w:t>", "replace": "<w:t>new</w:t>"}] }

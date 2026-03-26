@@ -51,6 +51,25 @@ class TextReplacer:
         return patterns
         self._paragraph_has_page_breaks_cache = {}
     
+    @staticmethod
+    def _compile_whitespace_flexible_pattern(search_text: str) -> re.Pattern:
+        """Compile a literal search string into a regex that matches any Unicode
+        whitespace in place of whitespace sequences in the search text.
+
+        This handles DOCX documents that contain en-spaces (\\u2002),
+        non-breaking spaces (\\u00a0), em-spaces (\\u2003), and other Unicode
+        whitespace characters that would not match a literal tab or space.
+        """
+        # Split on whitespace runs, escape each literal part, rejoin with \s+
+        parts = re.split(r'(\s+)', search_text)
+        regex_parts = []
+        for part in parts:
+            if re.fullmatch(r'\s+', part):
+                regex_parts.append(r'\s+')
+            else:
+                regex_parts.append(re.escape(part))
+        return re.compile(''.join(regex_parts))
+
     def _precompile_patterns(self):
         """Pre-compile regex patterns for all replacements to improve performance."""
         for i, op in enumerate(self.text_ops):
@@ -58,7 +77,10 @@ class TextReplacer:
                 continue
             search_text = op['search']
             use_regex = bool(op.get('regex'))
-            pattern = re.compile(search_text if use_regex else re.escape(search_text))
+            if use_regex:
+                pattern = re.compile(search_text)
+            else:
+                pattern = self._compile_whitespace_flexible_pattern(search_text)
             self._compiled_patterns[i] = pattern
     
     def clear_caches(self):
@@ -100,13 +122,14 @@ class TextReplacer:
     
     def _pattern_spans_paragraphs(self, paragraphs: List[Paragraph], search_text: str) -> bool:
         """Check if pattern spans across multiple paragraphs."""
+        pattern = self._compile_whitespace_flexible_pattern(search_text)
         combined_text = "".join(para.text for para in paragraphs)
-        if search_text not in combined_text:
+        if not pattern.search(combined_text):
             return False
-            
+
         # Check if this pattern actually spans paragraphs
         for para in paragraphs:
-            if search_text in para.text:
+            if pattern.search(para.text):
                 return False  # Found in single paragraph
         return True
     
@@ -116,17 +139,19 @@ class TextReplacer:
         start_idx = self._find_pattern_start(paragraphs, search_text)
         if start_idx is None:
             return []
-        
+
+        pattern = self._compile_whitespace_flexible_pattern(search_text)
+
         # Find consecutive paragraphs until we have the complete pattern
         affected_paragraphs = []
         accumulated_text = ""
-        
+
         for i in range(start_idx, len(paragraphs)):
             accumulated_text += paragraphs[i].text
             affected_paragraphs.append(i)
-            
+
             # Check if we now have the complete search pattern
-            if search_text in accumulated_text:
+            if pattern.search(accumulated_text):
                 break
                 
         return affected_paragraphs
@@ -696,7 +721,10 @@ class TextReplacer:
             pattern = self._compiled_patterns.get(i)
             if pattern is None:
                 use_regex = bool(op.get('regex'))
-                pattern = re.compile(search_text if use_regex else re.escape(search_text))
+                if use_regex:
+                    pattern = re.compile(search_text)
+                else:
+                    pattern = self._compile_whitespace_flexible_pattern(search_text)
             
             # Handle regular replace operation
             replace_text = op['replace']
@@ -710,18 +738,32 @@ class TextReplacer:
                 if has_existing_pagebreak and 'pagebreak' not in replace_text.lower():
                     replace_text = replace_text + 'pagebreak'
             
-            # Replace all non-hyperlink matches
+            # Replace non-hyperlink matches, respecting count/occurrence limits
             matches = list(pattern.finditer(new_text))
             replacements_made = 0
-            
-            # Process matches in reverse order to avoid offset issues
-            for match in reversed(matches):
+            max_count = op.get('count', 0)  # 0 = unlimited
+            occurrence = op.get('occurrence', 0)  # 0 = all, 1 = first, 2 = second, etc.
+
+            # Filter out hyperlink matches first
+            valid_matches = []
+            for match in matches:
                 start, end = match.start(), match.end()
-                # Check if this match is in a hyperlink (if paragraph available)
                 if paragraph and self._match_overlaps_hyperlink(paragraph, search_text, start, end):
-                    continue  # Skip this match, try the next one
-                
-                # Replace this match
+                    continue
+                valid_matches.append(match)
+
+            # If targeting a specific occurrence, select only that match
+            if occurrence > 0:
+                if occurrence <= len(valid_matches):
+                    valid_matches = [valid_matches[occurrence - 1]]
+                else:
+                    valid_matches = []
+            elif max_count > 0:
+                valid_matches = valid_matches[:max_count]
+
+            # Process matches in reverse order to avoid offset issues
+            for match in reversed(valid_matches):
+                start, end = match.start(), match.end()
                 new_text = new_text[:start] + replace_text + new_text[end:]
                 replacements_made += 1
             

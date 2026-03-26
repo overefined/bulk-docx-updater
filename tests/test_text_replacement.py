@@ -275,6 +275,215 @@ class TestTextReplacementWithDocx:
         assert is_hyperlinked is True
 
 
+class TestWhitespaceFlexibleMatching:
+    """Test that searches match Unicode whitespace variants (en-space, non-breaking space, etc.)."""
+
+    def setup_method(self):
+        self.formatter = FormattingProcessor()
+
+    def test_tab_matches_en_space(self):
+        """Search with tab matches en-space (\u2002) in document text."""
+        operations = [{"op": "replace", "search": "hello\tworld", "replace": "replaced"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("hello\u2002world")
+        assert modified is True
+        assert result == "replaced"
+
+    def test_space_matches_non_breaking_space(self):
+        """Search with regular space matches non-breaking space (\u00a0)."""
+        operations = [{"op": "replace", "search": "hello world", "replace": "replaced"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("hello\u00a0world")
+        assert modified is True
+        assert result == "replaced"
+
+    def test_space_matches_em_space(self):
+        """Search with regular space matches em-space (\u2003)."""
+        operations = [{"op": "replace", "search": "A B", "replace": "X"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("A\u2003B")
+        assert modified is True
+        assert result == "X"
+
+    def test_tab_matches_tab(self):
+        """Normal tab still matches tab."""
+        operations = [{"op": "replace", "search": "col1\tcol2", "replace": "replaced"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("col1\tcol2")
+        assert modified is True
+        assert result == "replaced"
+
+    def test_multiple_whitespace_chars(self):
+        """Search with mixed whitespace matches different Unicode whitespace."""
+        operations = [{"op": "replace", "search": "a \t b", "replace": "X"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        # Document has en-space + non-breaking space + em-space between tokens
+        result, modified = replacer.apply_text_replacements("a\u2002\u00a0\u2003b")
+        assert modified is True
+        assert result == "X"
+
+    def test_no_whitespace_still_exact(self):
+        """Search without whitespace still requires exact match."""
+        operations = [{"op": "replace", "search": "helloworld", "replace": "X"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("hello world")
+        assert modified is False
+        assert result == "hello world"
+
+    def test_regex_mode_unaffected(self):
+        """Regex mode is not altered by whitespace normalization."""
+        operations = [{"op": "replace", "search": r"hello\s+world", "replace": "X", "regex": True}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("hello\u2002world")
+        assert modified is True
+        assert result == "X"
+
+    def test_real_world_permit_to_operate(self):
+        """Reproduce the OH template scenario: tab + en-spaces in document text."""
+        operations = [{"op": "replace", "search": "permit-to-operate?             \t", "replace": "permit-to-operate? 500BHP"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        # Simulate document text with en-spaces and tab
+        doc_text = "permit-to-operate?\u2002\u2002\u2002\u2002\u2002\u2002\u2002\u2002\u2002\u2002\u2002\u2002\u2002\t"
+        result, modified = replacer.apply_text_replacements(doc_text)
+        assert modified is True
+        assert result == "permit-to-operate? 500BHP"
+
+    def test_compile_whitespace_flexible_pattern(self):
+        """Test the static pattern compiler directly."""
+        pattern = TextReplacer._compile_whitespace_flexible_pattern("a\tb")
+        assert pattern.search("a\tb") is not None
+        assert pattern.search("a\u2002b") is not None
+        assert pattern.search("a  b") is not None
+        assert pattern.search("ab") is None
+
+
+class TestCountAndOccurrence:
+    """Test count and occurrence options for text replacement."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.formatter = FormattingProcessor()
+
+    def test_count_limits_replacements(self):
+        """Test that count limits the number of replacements."""
+        operations = [{"op": "replace", "search": "foo", "replace": "bar", "count": 2}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("foo foo foo foo")
+        assert modified is True
+        assert result == "bar bar foo foo"
+
+    def test_count_zero_replaces_all(self):
+        """Test that count=0 (default) replaces all occurrences."""
+        operations = [{"op": "replace", "search": "foo", "replace": "bar", "count": 0}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("foo foo foo")
+        assert modified is True
+        assert result == "bar bar bar"
+
+    def test_count_one(self):
+        """Test that count=1 replaces only the first occurrence."""
+        operations = [{"op": "replace", "search": "Address", "replace": "123 Main St", "count": 1}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("Address\nAddress")
+        assert modified is True
+        assert result == "123 Main St\nAddress"
+
+    def test_count_exceeding_matches(self):
+        """Test that count greater than total matches replaces all."""
+        operations = [{"op": "replace", "search": "x", "replace": "y", "count": 10}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("x x x")
+        assert modified is True
+        assert result == "y y y"
+
+    def test_occurrence_first(self):
+        """Test targeting the first occurrence."""
+        operations = [{"op": "replace", "search": "Address", "replace": "123 Main St", "occurrence": 1}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("Address\nCity\nAddress")
+        assert modified is True
+        assert result == "123 Main St\nCity\nAddress"
+
+    def test_occurrence_second(self):
+        """Test targeting the second occurrence."""
+        operations = [{"op": "replace", "search": "Address", "replace": "City, ST 12345", "occurrence": 2}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("Address\nCity\nAddress")
+        assert modified is True
+        assert result == "Address\nCity\nCity, ST 12345"
+
+    def test_occurrence_beyond_matches(self):
+        """Test targeting an occurrence that doesn't exist."""
+        operations = [{"op": "replace", "search": "foo", "replace": "bar", "occurrence": 5}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("foo foo")
+        assert modified is False
+        assert result == "foo foo"
+
+    def test_occurrence_with_no_match(self):
+        """Test occurrence on text with no matches at all."""
+        operations = [{"op": "replace", "search": "missing", "replace": "bar", "occurrence": 1}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("foo foo")
+        assert modified is False
+        assert result == "foo foo"
+
+    def test_default_replaces_all(self):
+        """Test that without count/occurrence, all occurrences are replaced."""
+        operations = [{"op": "replace", "search": "a", "replace": "b"}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("a a a a")
+        assert modified is True
+        assert result == "b b b b"
+
+    def test_sequential_occurrence_replacements(self):
+        """Test using occurrence to replace identical text sequentially with different values."""
+        ops = [
+            {"op": "replace", "search": "Address", "replace": "123 Main St", "occurrence": 1},
+            {"op": "replace", "search": "Address", "replace": "Springfield, IL 62701", "occurrence": 1},
+        ]
+        replacer = TextReplacer(ops, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("Address\nAddress\nAddress")
+        assert modified is True
+        assert result == "123 Main St\nSpringfield, IL 62701\nAddress"
+
+    def test_count_with_regex(self):
+        """Test count option combined with regex."""
+        operations = [{"op": "replace", "search": r"\d+", "replace": "X", "regex": True, "count": 2}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("Item 1, Item 2, Item 3")
+        assert modified is True
+        assert result == "Item X, Item X, Item 3"
+
+    def test_occurrence_with_regex(self):
+        """Test occurrence option combined with regex."""
+        operations = [{"op": "replace", "search": r"\d+", "replace": "99", "regex": True, "occurrence": 2}]
+        replacer = TextReplacer(operations, self.formatter)
+
+        result, modified = replacer.apply_text_replacements("Item 1, Item 2, Item 3")
+        assert modified is True
+        assert result == "Item 1, Item 99, Item 3"
+
+
 class TestParagraphBreakIntegration:
     """Integration tests for paragraph break functionality."""
     

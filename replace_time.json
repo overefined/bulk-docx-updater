@@ -1,0 +1,7 @@
+{
+  "replace": [
+    ["{{ o2.ReadingTimestamp.strftime('%H:%M:%S') }}", "{{ o2.ReadingTimestamp }}"],                                                                                                                                                                                          
+    ["{{ thc.ReadingTimestamp.strftime('%H:%M:%S') }}", "{{ thc.ReadingTimestamp }}"],
+    ["{{ ftir.time_fmtd().split(' ')[-1] }}", "{{ ftir.time_fmtd() }}"]
+  ]
+}

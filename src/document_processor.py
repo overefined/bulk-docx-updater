@@ -14,8 +14,8 @@ from typing import List, Dict, Optional, Tuple
 import logging
 from docx import Document
 from docx.shared import Inches
-from docx.oxml.ns import qn
-from docx.oxml import parse_xml
+from docx.oxml.ns import qn, nsdecls
+from docx.oxml import parse_xml, OxmlElement
 
 from src.formatting import FormattingProcessor
 from src.text_replacement import TextReplacer
@@ -513,6 +513,39 @@ class DocxBulkUpdater:
                     if self.replace_text_in_table(doc, op):
                         modified = True
 
+            # Handle whole-table swaps (replace the entire <w:tbl> element)
+            for op in self.operations:
+                if op.get('op') == 'replace_table':
+                    if self.replace_table(doc, op):
+                        modified = True
+
+            # Wrap tables in their own landscape section (runs after replace_table
+            # so a freshly-swapped table can still be located and rotated)
+            for op in self.operations:
+                if op.get('op') == 'landscape_table':
+                    if self.landscape_table(doc, op):
+                        modified = True
+
+            # Format located tables in place (cell margins / alignment)
+            for op in self.operations:
+                if op.get('op') == 'format_table':
+                    if self.format_table(doc, op):
+                        modified = True
+
+            # Relocate a stranding section break to before a heading
+            for op in self.operations:
+                if op.get('op') == 'section_break_before':
+                    if self.section_break_before(doc, op):
+                        modified = True
+
+            # Center a divider paragraph horizontally + vertically on its own
+            # page and push following content to a new section (runs after
+            # section_break_before so the divider is already on its own page)
+            for op in self.operations:
+                if op.get('op') == 'divider':
+                    if self.divider(doc, op):
+                        modified = True
+
             # Then do the text replacements and inserts
             has_search_ops = any(op.get('op') in ('replace', 'xml_replace') for op in self.operations)
 
@@ -609,6 +642,16 @@ class DocxBulkUpdater:
                         table_desc = f"table with header '{table_header}'" if table_header != 'first table' else table_header
                     column_widths = op.get('column_widths', [])
                     operation_results.append(f"Set column widths for {table_desc}: {column_widths}")
+
+            if op.get('op') == 'replace_table':
+                if self.replace_table(modified_doc, op):
+                    if 'table_index' in op:
+                        loc = f"table {op['table_index']}"
+                    elif 'table_header' in op:
+                        loc = f"table with header '{op['table_header']}'"
+                    else:
+                        loc = f"table containing '{op.get('match')}'"
+                    operation_results.append(f"Replaced entire {loc} with new table XML")
 
         # Apply standard text replacements
         self._process_all_text_replacements(modified_doc)
@@ -1104,6 +1147,582 @@ class DocxBulkUpdater:
         except Exception as e:
             self._logger.error(f"Error replacing table cell: {e}")
             return False
+
+    # Fallback namespace declarations for hand-written replacement table XML that
+    # only uses a subset of prefixes. A <w:tbl> copied straight out of Word already
+    # carries its own xmlns declarations, so this is only used when they're absent.
+    _WORD_NSDECLS = (
+        'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+        'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" '
+        'xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" '
+        'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '
+        'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+    )
+
+    def _find_table_for_replace(self, doc: Document, op: Dict):
+        """Locate the target table for a replace_table op.
+
+        Resolution order: table_index, then table_header (header-row text match,
+        like replace_table_cell), then match (substring found anywhere in the
+        table's text). Returns (table, index) or (None, None).
+        """
+        table_index = op.get('table_index')
+        table_header = op.get('table_header')
+        header_row_index = op.get('header_row', 0)
+        match_text = op.get('match')
+
+        if table_index is not None:
+            if 0 <= table_index < len(doc.tables):
+                return doc.tables[table_index], table_index
+            self._logger.warning(f"Table index {table_index} not found (only {len(doc.tables)} tables exist)")
+            return None, None
+
+        if table_header is not None:
+            for i, table in enumerate(doc.tables):
+                if len(table.rows) <= header_row_index:
+                    continue
+                match_row = table.rows[header_row_index]
+                header_text_tab = '\t'.join(cell.text.strip() for cell in match_row.cells)
+                header_text_comma = ', '.join(cell.text.strip() for cell in match_row.cells)
+                header_text_space = ' '.join(cell.text.strip() for cell in match_row.cells)
+                if (table_header == header_text_tab or
+                        table_header == header_text_comma or
+                        table_header == header_text_space or
+                        table_header in header_text_space):
+                    return table, i
+            self._logger.warning(f"No table found with header matching '{table_header}' in row {header_row_index}")
+            return None, None
+
+        if match_text is not None:
+            for i, table in enumerate(doc.tables):
+                full_text = '\n'.join(cell.text for row in table.rows for cell in row.cells)
+                if match_text in full_text:
+                    return table, i
+            self._logger.warning(f"No table found containing text '{match_text}'")
+            return None, None
+
+        self._logger.warning("replace_table requires 'table_index', 'table_header', or 'match'")
+        return None, None
+
+    def replace_table(self, doc: Document, op: Dict) -> bool:
+        """Replace an entire table's <w:tbl> element with new table XML.
+
+        Unlike replace_table_cell (which only edits cell text), this swaps the
+        whole table, so the replacement may have a completely different shape,
+        orientation, or docxtpl loop tags.
+
+        Config keys:
+            - replace / replace_file: the new <w:tbl> XML (replace_file resolved
+              by the config loader)
+            - table_index / table_header / match: how to locate the table
+            - header_row: header row index for table_header matching (default 0)
+        """
+        try:
+            new_xml = op.get('replace')
+            if not new_xml:
+                self._logger.warning("replace_table: no replacement XML provided")
+                return False
+
+            target_table, target_index = self._find_table_for_replace(doc, op)
+            if target_table is None:
+                return False
+
+            # Parse the replacement XML; if prefixes aren't declared, inject a
+            # standard set and retry once.
+            try:
+                new_tbl = parse_xml(new_xml)
+            except Exception:
+                if 'xmlns:w' not in new_xml:
+                    patched = re.sub(r'<w:tbl\b', f'<w:tbl {self._WORD_NSDECLS}', new_xml, count=1)
+                    new_tbl = parse_xml(patched)
+                else:
+                    raise
+
+            if not new_tbl.tag.endswith('}tbl'):
+                self._logger.warning(f"replace_table: replacement XML root is <{new_tbl.tag}>, expected <w:tbl>")
+                return False
+
+            old_tbl = target_table._tbl
+            parent = old_tbl.getparent()
+            if parent is None:
+                self._logger.warning(f"replace_table: table {target_index} has no parent element")
+                return False
+
+            parent.replace(old_tbl, new_tbl)
+            self._logger.info(f"Replaced entire table {target_index} with new <w:tbl>")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error replacing table: {e}")
+            return False
+
+    def landscape_table(self, doc: Document, op: Dict) -> bool:
+        """Ensure the located table sits in a landscape section.
+
+        If the table is already in a landscape section, only its section
+        margins are adjusted (no redundant section is added). Otherwise the
+        table is wrapped in its own landscape section: a section break is
+        inserted just before it (cloning the governing section's properties,
+        kept as-is) and a landscape section break just after it, so only the
+        table's section is rotated and surrounding content is untouched.
+
+        Config keys:
+            - table_index / table_header / match: how to locate the table
+            - header_row: header row index for table_header matching (default 0)
+            - margins: optional margins for the landscape section, as
+              "top,bottom,left,right" inches or a dict; default 0.5" all round
+        """
+        import copy
+
+        try:
+            target_table, target_index = self._find_table_for_replace(doc, op)
+            if target_table is None:
+                return False
+
+            tbl = target_table._tbl
+            body = doc.element.body
+            if tbl.getparent() is not body:
+                self._logger.warning(
+                    f"landscape_table: table {target_index} is not a direct child of the "
+                    "document body (nested tables are not supported)")
+                return False
+
+            margins = self._landscape_margins(op)
+            governing = self._governing_sectPr(doc, tbl)
+            pgSz = governing.find(qn('w:pgSz'))
+            already_landscape = pgSz is not None and pgSz.get(qn('w:orient')) == 'landscape'
+
+            if already_landscape:
+                # The table already lives in a landscape section — don't add a
+                # redundant section, just apply the requested margins there.
+                changed = self._set_section_margins(governing, margins)
+                if changed:
+                    self._logger.info(
+                        f"Table {target_index} already landscape; updated section margins")
+                else:
+                    self._logger.debug(
+                        f"Table {target_index} already landscape with requested margins")
+                return changed
+
+            # Portrait: wrap the table in its own landscape island. The section
+            # before keeps the governing (portrait) properties; the one after
+            # carries the landscape properties for the table's section.
+            before_sectPr = copy.deepcopy(governing)
+            land_sectPr = copy.deepcopy(governing)
+            self._make_sectPr_landscape(land_sectPr, margins)
+
+            tbl.addprevious(self._wrap_sectPr_in_paragraph(before_sectPr))
+            tbl.addnext(self._wrap_sectPr_in_paragraph(land_sectPr))
+
+            self._logger.info(f"Wrapped table {target_index} in a landscape section")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error applying landscape_table: {e}")
+            return False
+
+    def format_table(self, doc: Document, op: Dict) -> bool:
+        """Format a located table in place: tighten cell margins and/or set
+        the alignment of every cell's text.
+
+        Unlike align_table_cells (which matches individual cell text patterns
+        anywhere in the document), this targets one table and applies to ALL
+        its cells — useful for giving the small in-template tables (e.g. O2 /
+        THC raw-data) the same tight, left-justified look as the swapped FTIR
+        fragments.
+
+        Config keys:
+            - table_index / table_header / match: how to locate the table
+            - header_row: header row index for table_header matching (default 0)
+            - cell_margins: table cell margins in twips. An int (or one-value
+              string) sets left=right=N with top=bottom=0; a "top,bottom,left,
+              right" string sets all four. Omit to leave margins untouched.
+            - align: 'left' | 'center' | 'right' | 'justify', applied to every
+              cell paragraph. Omit to leave alignment untouched.
+        """
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+        try:
+            target_table, target_index = self._find_table_for_replace(doc, op)
+            if target_table is None:
+                return False
+
+            changed = False
+
+            margins = op.get('cell_margins')
+            if margins is not None and self._set_table_cell_margins(target_table._tbl, margins):
+                changed = True
+
+            align = op.get('align')
+            if align:
+                amap = {
+                    'left': WD_ALIGN_PARAGRAPH.LEFT,
+                    'center': WD_ALIGN_PARAGRAPH.CENTER,
+                    'right': WD_ALIGN_PARAGRAPH.RIGHT,
+                    'justify': WD_ALIGN_PARAGRAPH.JUSTIFY,
+                }
+                alignment = amap.get(str(align).lower())
+                if alignment is None:
+                    self._logger.warning(f"format_table: unknown align '{align}'")
+                else:
+                    for row in target_table.rows:
+                        for cell in row.cells:
+                            for paragraph in cell.paragraphs:
+                                paragraph.alignment = alignment
+                    changed = True
+
+            if changed:
+                self._logger.info(
+                    f"Formatted table {target_index} (cell_margins={margins}, align={align})")
+            return changed
+
+        except Exception as e:
+            self._logger.error(f"Error applying format_table: {e}")
+            return False
+
+    def _set_table_cell_margins(self, tbl, margins) -> bool:
+        """Set the table-level default cell margins (<w:tblCellMar>) on a <w:tbl>.
+
+        margins accepts an int / one-value string (left=right=N twips, top=
+        bottom=0) or a "top,bottom,left,right" twips string. Returns True if
+        applied. tblCellMar is (re)inserted in schema order — immediately
+        before <w:tblLook> when present.
+        """
+        if isinstance(margins, str):
+            parts = [p.strip() for p in margins.split(',') if p.strip() != '']
+            if len(parts) == 1:
+                left = right = int(parts[0]); top = bottom = 0
+            elif len(parts) == 4:
+                top, bottom, left, right = (int(p) for p in parts)
+            else:
+                self._logger.warning(
+                    f"format_table: cell_margins '{margins}' must be 1 or 4 twip values")
+                return False
+        else:
+            left = right = int(margins); top = bottom = 0
+
+        tblPr = tbl.find(qn('w:tblPr'))
+        if tblPr is None:
+            tblPr = OxmlElement('w:tblPr')
+            tbl.insert(0, tblPr)
+
+        existing = tblPr.find(qn('w:tblCellMar'))
+        if existing is not None:
+            tblPr.remove(existing)
+
+        cellMar = OxmlElement('w:tblCellMar')
+        for tag, val in (('w:top', top), ('w:left', left), ('w:bottom', bottom), ('w:right', right)):
+            m = OxmlElement(tag)
+            m.set(qn('w:w'), str(val))
+            m.set(qn('w:type'), 'dxa')
+            cellMar.append(m)
+
+        tblLook = tblPr.find(qn('w:tblLook'))
+        if tblLook is not None:
+            tblLook.addprevious(cellMar)
+        else:
+            tblPr.append(cellMar)
+        return True
+
+    def _governing_sectPr(self, doc: Document, tbl):
+        """Return the sectPr governing the table's position: the next in-body
+        paragraph-level sectPr after the table, else the body's final sectPr."""
+        el = tbl.getnext()
+        while el is not None:
+            if el.tag == qn('w:p'):
+                pPr = el.find(qn('w:pPr'))
+                if pPr is not None:
+                    inner = pPr.find(qn('w:sectPr'))
+                    if inner is not None:
+                        return inner
+            el = el.getnext()
+        return doc.sections[-1]._sectPr
+
+    @staticmethod
+    def _wrap_sectPr_in_paragraph(sectPr):
+        """Build an empty <w:p> whose pPr carries the given sectPr (a section
+        break attaches to the last paragraph of the section it ends)."""
+        p = OxmlElement('w:p')
+        pPr = OxmlElement('w:pPr')
+        pPr.append(sectPr)
+        p.append(pPr)
+        return p
+
+    @staticmethod
+    def _make_sectPr_landscape(sectPr, margins: Dict[str, float]) -> None:
+        """Rotate a sectPr to landscape and apply margins (inches)."""
+        pgSz = sectPr.find(qn('w:pgSz'))
+        if pgSz is None:
+            pgSz = OxmlElement('w:pgSz')
+            sectPr.append(pgSz)
+        cur_w, cur_h = pgSz.get(qn('w:w')), pgSz.get(qn('w:h'))
+        if cur_w and cur_h:
+            short, long = sorted((int(cur_w), int(cur_h)))
+            pgSz.set(qn('w:w'), str(long))
+            pgSz.set(qn('w:h'), str(short))
+        pgSz.set(qn('w:orient'), 'landscape')
+        DocxBulkUpdater._set_section_margins(sectPr, margins)
+
+    @staticmethod
+    def _set_section_margins(sectPr, margins: Dict[str, float]) -> bool:
+        """Apply margins (inches) to a sectPr's pgMar. Returns True if changed."""
+        pgMar = sectPr.find(qn('w:pgMar'))
+        if pgMar is None:
+            pgMar = OxmlElement('w:pgMar')
+            sectPr.append(pgMar)
+        changed = False
+        for side, inches in margins.items():
+            twips = str(int(round(inches * 1440)))
+            if pgMar.get(qn('w:' + side)) != twips:
+                pgMar.set(qn('w:' + side), twips)
+                changed = True
+        return changed
+
+    @staticmethod
+    def _landscape_margins(op: Dict) -> Dict[str, float]:
+        """Resolve the landscape section margins (inches) from the op config."""
+        margins = {'top': 0.5, 'bottom': 0.5, 'left': 0.5, 'right': 0.5}
+        val = op.get('margins')
+        if isinstance(val, dict):
+            for side in margins:
+                if side in val:
+                    margins[side] = float(val[side])
+        elif isinstance(val, str):
+            parts = [p.strip() for p in val.split(',')]
+            if len(parts) == 4:
+                margins['top'], margins['bottom'], margins['left'], margins['right'] = (
+                    float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3]))
+        return margins
+
+    def section_break_before(self, doc: Document, op: Dict) -> bool:
+        """Make the matched paragraph start its own section by moving the
+        section break that currently follows it to immediately before it.
+
+        Fixes templates where a heading is stranded at the tail of the previous
+        section — e.g. an "O2 RAW DATA" heading left inside the landscape FTIR
+        rawdata section, so it renders at the end of those pages instead of
+        heading its own (portrait) page. The following section break is
+        relocated before the heading, so the heading begins a new page in the
+        next section's orientation and the preceding content keeps the moved
+        break's orientation.
+
+        Config keys:
+            - match: text of the target paragraph (exact match preferred,
+              falls back to substring)
+        """
+        try:
+            match_text = op.get('match')
+            if not match_text:
+                self._logger.warning("section_break_before: 'match' is required")
+                return False
+
+            body = doc.element.body
+            target = self._find_paragraph_by_text(body, match_text)
+            if target is None:
+                self._logger.warning(
+                    f"section_break_before: no paragraph matching '{match_text}'")
+                return False
+
+            # Idempotency: already immediately preceded by a section break?
+            prev = target.getprevious()
+            if prev is not None and prev.tag == qn('w:p'):
+                pPr = prev.find(qn('w:pPr'))
+                if pPr is not None and pPr.find(qn('w:sectPr')) is not None:
+                    self._logger.debug(
+                        f"'{match_text}' already starts a section; skipping")
+                    return False
+
+            # The break that ends the target's current section is the next
+            # paragraph-level sectPr after it.
+            source_p, source_sectPr = self._next_paragraph_sectPr(target)
+            if source_sectPr is None:
+                self._logger.warning(
+                    f"section_break_before: no following section break to move "
+                    f"before '{match_text}'")
+                return False
+
+            source_sectPr.getparent().remove(source_sectPr)
+            target.addprevious(self._wrap_sectPr_in_paragraph(source_sectPr))
+
+            # Drop the paragraph that used to hold the break if it's now empty.
+            if source_p is not None and not self._paragraph_has_content(source_p):
+                parent = source_p.getparent()
+                if parent is not None:
+                    parent.remove(source_p)
+
+            self._logger.info(f"Moved section break before '{match_text}'")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error in section_break_before: {e}")
+            return False
+
+    def divider(self, doc: Document, op: Dict) -> bool:
+        """Isolate the matched paragraph on its own vertically-centered page,
+        WITHOUT touching the paragraph itself.
+
+        Used for the "APPENDIX F / O2 RAW DATA" divider. The paragraph already
+        centers horizontally via its style (EMITAppendix1 has jc=center) plus
+        the numbering's own indent — so this op deliberately leaves the
+        paragraph's runs/pPr untouched (an earlier attempt that forced
+        jc/indent on it actually *broke* the numbered-heading centering).
+
+        It only does the "around it" structural work so the divider sits alone
+        on one vertically-centered page with the real content on the next page:
+
+          - The divider is followed by a block of docxtpl directives
+            ({%p set ... %}, {%p if ... %}) that vanish on render. In the
+            templates these directives live in their OWN section, bracketed by
+            two section breaks — which renders as a BLANK page. So this op
+            collapses every section break between the divider and the first
+            real content (table / visible text) down to a single break, so the
+            divider and the vanishing block share ONE section.
+          - That single kept break gets <w:vAlign w:val="center"/> so the
+            divider is vertically centered (vAlign is a section property).
+
+        The result heals itself on re-run (extra breaks are removed again).
+        Runs after section_break_before, which has already moved the divider
+        onto its own page by relocating the preceding (landscape) break.
+
+        Config keys:
+            - match: text of the target paragraph (exact match preferred,
+              falls back to substring)
+        """
+        import copy
+        try:
+            match_text = op.get('match')
+            if not match_text:
+                self._logger.warning("divider: 'match' is required")
+                return False
+
+            body = doc.element.body
+            target = self._find_paragraph_by_text(body, match_text)
+            if target is None:
+                self._logger.warning(
+                    f"divider: no paragraph matching '{match_text}'")
+                return False
+
+            # Scan forward from the divider, skipping "vanishing" paragraphs
+            # (empty, or docxtpl directives {%...%} / {{...}} that disappear on
+            # render), collecting section breaks, until the first real content
+            # (a table or a paragraph with visible text).
+            breaks = []
+            content_el = None
+            el = target.getnext()
+            while el is not None:
+                if el.tag == qn('w:tbl'):
+                    content_el = el
+                    break
+                if el.tag == qn('w:p'):
+                    pPr = el.find(qn('w:pPr'))
+                    sp = pPr.find(qn('w:sectPr')) if pPr is not None else None
+                    if sp is not None:
+                        breaks.append(sp)
+                    else:
+                        txt = "".join(x.text or "" for x in el.iter(qn('w:t'))).strip()
+                        if txt and not (txt.startswith('{%') or txt.startswith('{{')):
+                            content_el = el
+                            break
+                el = el.getnext()
+
+            changed = False
+
+            if breaks:
+                # Keep the break nearest the content; drop the rest so the
+                # divider + vanishing block become one section (no blank page).
+                keep = breaks[-1]
+                for sp in breaks[:-1]:
+                    sp.getparent().remove(sp)
+                    changed = True
+                if self._set_sectPr_valign(keep, 'center'):
+                    changed = True
+            else:
+                # No section break before the content: create one (after the
+                # vanishing block) so the divider is isolated on its own page.
+                # Clone the governing section to keep page size / orientation.
+                _, gov = self._next_paragraph_sectPr(target)
+                if gov is None:
+                    gov = body.find(qn('w:sectPr'))  # body-final sectPr
+                if gov is None:
+                    self._logger.warning(
+                        "divider: no section found to clone for the break")
+                else:
+                    new_sectPr = copy.deepcopy(gov)
+                    self._set_sectPr_valign(new_sectPr, 'center')
+                    wrap = self._wrap_sectPr_in_paragraph(new_sectPr)
+                    if content_el is not None:
+                        content_el.addprevious(wrap)
+                    else:
+                        target.addnext(wrap)
+                    changed = True
+
+            if changed:
+                self._logger.info(f"Applied divider to '{match_text}'")
+            return changed
+
+        except Exception as e:
+            self._logger.error(f"Error in divider: {e}")
+            return False
+
+    @staticmethod
+    def _set_sectPr_valign(sectPr, value: str) -> bool:
+        """Set vertical text alignment (<w:vAlign>) on a sectPr. Returns True
+        if changed."""
+        vAlign = sectPr.find(qn('w:vAlign'))
+        if vAlign is None:
+            vAlign = OxmlElement('w:vAlign')
+            vAlign.set(qn('w:val'), value)
+            # <w:vAlign> precedes <w:docGrid> in the sectPr schema order.
+            docGrid = sectPr.find(qn('w:docGrid'))
+            if docGrid is not None:
+                docGrid.addprevious(vAlign)
+            else:
+                sectPr.append(vAlign)
+            return True
+        if vAlign.get(qn('w:val')) == value:
+            return False
+        vAlign.set(qn('w:val'), value)
+        return True
+
+    @staticmethod
+    def _find_paragraph_by_text(body, text: str):
+        """Find a body-level <w:p> by text. Prefers an exact (stripped) match,
+        falls back to the first paragraph containing the text."""
+        text = text.strip()
+        exact = contains = None
+        for el in body:
+            if el.tag != qn('w:p'):
+                continue
+            t = "".join(x.text or "" for x in el.iter(qn('w:t'))).strip()
+            if t == text and exact is None:
+                exact = el
+            elif text in t and contains is None:
+                contains = el
+        return exact if exact is not None else contains
+
+    @staticmethod
+    def _next_paragraph_sectPr(target):
+        """Return (paragraph, sectPr) for the first paragraph-level section
+        break after target, or (None, None)."""
+        el = target.getnext()
+        while el is not None:
+            if el.tag == qn('w:p'):
+                pPr = el.find(qn('w:pPr'))
+                if pPr is not None:
+                    sp = pPr.find(qn('w:sectPr'))
+                    if sp is not None:
+                        return el, sp
+            el = el.getnext()
+        return None, None
+
+    @staticmethod
+    def _paragraph_has_content(p) -> bool:
+        """True if the paragraph has any run or non-whitespace text."""
+        if p.find(qn('w:r')) is not None:
+            return True
+        return "".join(t.text or "" for t in p.iter(qn('w:t'))).strip() != ""
 
     def _set_cell_content(self, cell, content: str) -> None:
         """Set cell content using the established pattern from _rebuild_paragraph_basic.

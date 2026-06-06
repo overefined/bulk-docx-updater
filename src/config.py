@@ -16,7 +16,8 @@ _OPERATION_KEYS = {
     'replace', 'xml_replace', 'font_size', 'clear_properties',
     'set_comments', 'table_header_repeat', 'cleanup_empty_after',
     'replace_image', 'align_table_cells', 'replace_table_cell',
-    'set_table_column_widths', 'replace_in_table',
+    'set_table_column_widths', 'replace_in_table', 'replace_table',
+    'landscape_table', 'format_table', 'section_break_before', 'divider',
 }
 
 # Settings keys (not operations)
@@ -200,6 +201,51 @@ def _expand_dict_config(data: Dict[str, Any], config_dir: Path) -> Tuple[List[Di
                 op.update(entry)
                 operations.append(op)
 
+        elif key == 'replace_table':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"replace_table[{i}]: must be a dict")
+                op = {"op": "replace_table"}
+                op.update(entry)
+                operations.append(op)
+
+        elif key == 'landscape_table':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"landscape_table[{i}]: must be a dict")
+                op = {"op": "landscape_table"}
+                op.update(entry)
+                operations.append(op)
+
+        elif key == 'format_table':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"format_table[{i}]: must be a dict")
+                op = {"op": "format_table"}
+                op.update(entry)
+                operations.append(op)
+
+        elif key == 'section_break_before':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"section_break_before[{i}]: must be a dict")
+                op = {"op": "section_break_before"}
+                op.update(entry)
+                operations.append(op)
+
+        elif key == 'divider':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"divider[{i}]: must be a dict")
+                op = {"op": "divider"}
+                op.update(entry)
+                operations.append(op)
+
     return operations, settings
 
 
@@ -360,6 +406,57 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
                 logging.getLogger(__name__).error("Error: Operation %s: cannot specify both 'table_index' and 'table_header'", i)
                 sys.exit(1)
 
+        elif op_type == 'replace_table':
+            # 'replace' may be supplied inline or resolved later from 'replace_file'
+            if not ('replace' in op or 'replace_file' in op):
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace_table' requires 'replace' or 'replace_file' field", i)
+                sys.exit(1)
+            if 'replace' in op and not isinstance(op['replace'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace' must be a string", i)
+                sys.exit(1)
+            if not any(k in op for k in ('table_index', 'table_header', 'match')):
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace_table' requires one of 'table_index', 'table_header', or 'match' to locate the table", i)
+                sys.exit(1)
+
+        elif op_type == 'landscape_table':
+            if not any(k in op for k in ('table_index', 'table_header', 'match')):
+                logging.getLogger(__name__).error("Error: Operation %s: 'landscape_table' requires one of 'table_index', 'table_header', or 'match' to locate the table", i)
+                sys.exit(1)
+            if 'margins' in op and not isinstance(op['margins'], (str, dict)):
+                logging.getLogger(__name__).error("Error: Operation %s: 'margins' must be a string or dict", i)
+                sys.exit(1)
+
+        elif op_type == 'format_table':
+            if not any(k in op for k in ('table_index', 'table_header', 'match')):
+                logging.getLogger(__name__).error("Error: Operation %s: 'format_table' requires one of 'table_index', 'table_header', or 'match' to locate the table", i)
+                sys.exit(1)
+            if 'cell_margins' not in op and 'align' not in op:
+                logging.getLogger(__name__).error("Error: Operation %s: 'format_table' requires 'cell_margins' and/or 'align'", i)
+                sys.exit(1)
+            if 'cell_margins' in op and not isinstance(op['cell_margins'], (int, str)):
+                logging.getLogger(__name__).error("Error: Operation %s: 'cell_margins' must be an int or string", i)
+                sys.exit(1)
+            if 'align' in op and op['align'] not in ('left', 'center', 'right', 'justify'):
+                logging.getLogger(__name__).error("Error: Operation %s: 'align' must be left, center, right, or justify", i)
+                sys.exit(1)
+
+        elif op_type == 'section_break_before':
+            if 'match' not in op or not isinstance(op['match'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'section_break_before' requires a string 'match' field", i)
+                sys.exit(1)
+            if 'table_index' in op and not isinstance(op['table_index'], int):
+                logging.getLogger(__name__).error("Error: Operation %s: 'table_index' must be integer", i)
+                sys.exit(1)
+            if 'table_header' in op and not isinstance(op['table_header'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'table_header' must be string", i)
+                sys.exit(1)
+            if 'match' in op and not isinstance(op['match'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'match' must be string", i)
+                sys.exit(1)
+            if 'table_index' in op and 'table_header' in op:
+                logging.getLogger(__name__).error("Error: Operation %s: cannot specify both 'table_index' and 'table_header'", i)
+                sys.exit(1)
+
         elif op_type == 'set_table_column_widths':
             if 'column_widths' not in op:
                 logging.getLogger(__name__).error("Error: Operation %s: 'set_table_column_widths' requires 'column_widths' field", i)
@@ -482,6 +579,11 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
                 sys.exit(1)
             if 'table_index' in op and not isinstance(op['table_index'], int):
                 logging.getLogger(__name__).error("Error: Operation %s: 'table_index' must be integer", i)
+                sys.exit(1)
+
+        elif op_type == 'divider':
+            if 'match' not in op or not isinstance(op['match'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'divider' requires a string 'match' field", i)
                 sys.exit(1)
 
         else:

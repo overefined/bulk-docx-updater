@@ -101,9 +101,50 @@ Dict form also accepted per-entry:
 { "align_table_cells": {"patterns": ["text1", "text2"], "alignment": "left"} }
 ```
 
-Use a list value to apply multiple instances of `replace_table_cell`, `set_table_column_widths`, `align_table_cells`, or `replace_in_table`.
+Use a list value to apply multiple instances of `replace_table_cell`, `set_table_column_widths`, `align_table_cells`, `replace_in_table`, or `replace_table`.
+
+**Replace whole table**
+
+Swaps an entire `<w:tbl>` element for new table XML. Unlike `replace_table_cell` (which only edits cell text), the replacement may have a completely different shape, orientation, or docxtpl loop tags — useful for turning a fixed-column table into a dynamic `{%tr for ... %}` one.
+
+```json
+{ "replace_table": {"match": "reading1_co", "replace_file": "mdc_table.xml"} }
+{ "replace_table": {"table_index": 22, "replace_file": "mdc_table.xml"} }
+{ "replace_table": {"table_header": "Phase, Time", "replace": "<w:tbl>...</w:tbl>"} }
+```
+
+Locate the target table with one of:
+
+- `match`: substring found anywhere in the table's text (most robust across templates whose XML differs by rsid/paraId)
+- `table_index`: 0-based table index
+- `table_header`: header-row text match (`header_row` selects the header row, default 0)
+
+Provide the replacement table as inline `replace` XML or via `replace_file` (resolved relative to the config file). The XML root must be a `<w:tbl>`. A table copied straight out of Word already carries its own `xmlns` declarations; for hand-written XML that uses only `w:`/`w14:`/`mc:`/etc. prefixes, the standard declarations are injected automatically.
 
 `align_table_cells` aligns table cells containing specific text patterns. Supported alignments: `left`, `center`, `right`, `justify` (defaults to `left`).
+
+**Landscape table**
+
+Wraps a located table in its own landscape section, leaving the surrounding content in its original orientation. Useful for wide tables (many columns) that overflow a portrait page and wrap unreadably. Inserts a section break before the table and a landscape section break after it.
+
+```json
+{ "landscape_table": {"match": "for ftir in run1"} }
+{ "landscape_table": {"table_header": "Spectrum, Time, Phase", "margins": "0.5,0.5,0.5,0.5"} }
+{ "landscape_table": [ {"match": "run1"}, {"match": "run2"} ] }
+```
+
+Locate the table the same way as `replace_table` (`match` / `table_index` / `table_header`, with `header_row` for header matching). Optional `margins` sets the landscape section's margins as `"top,bottom,left,right"` inches or a dict; defaults to `0.5` all round. Runs after `replace_table`, so a freshly-swapped table can be located and rotated in the same config. Re-running is idempotent — a table already in a landscape section is left untouched. Only tables that are direct children of the document body are supported (not nested tables).
+
+**Section break before a heading**
+
+Makes a matched paragraph start its own page/section by moving the section break that currently *follows* it to immediately *before* it. Fixes templates where a heading is stranded at the tail of the previous section — e.g. an `O2 RAW DATA` heading left inside the landscape FTIR rawdata section, so it renders at the end of those pages instead of heading its own page. The relocated break keeps its orientation, so the preceding content stays as-is and the heading begins a new page in the next section's orientation.
+
+```json
+{ "section_break_before": {"match": "O2 RAW DATA"} }
+{ "section_break_before": [ {"match": "O2 RAW DATA"}, {"match": "SITE PHOTOS"} ] }
+```
+
+`match` is the paragraph text (exact match preferred, falls back to substring — so an appendix-list entry containing the same words isn't mistaken for the heading). Idempotent: a paragraph already preceded by a section break is left untouched. If no section break follows the paragraph, it's a no-op.
 
 **Image replacement**
 ```json

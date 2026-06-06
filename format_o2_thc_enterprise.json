@@ -1,0 +1,11 @@
+{
+  "format_table": [
+    { "match": "for o2 in calibration", "align": "left", "cell_margins": "28" },
+    { "match": "for o2 in run1", "align": "left", "cell_margins": "28" },
+    { "match": "for o2 in run2", "align": "left", "cell_margins": "28" },
+    { "match": "for o2 in run3", "align": "left", "cell_margins": "28" },
+    { "match": "for fuel in run1", "align": "left", "cell_margins": "28" },
+    { "match": "for fuel in run2", "align": "left", "cell_margins": "28" },
+    { "match": "for fuel in run3", "align": "left", "cell_margins": "28" }
+  ]
+}

@@ -12,3 +12,9 @@ scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Softw
 ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180
 unzip /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip -d /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates
 rm /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+
+# Pull from the server to local
+ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180 "cd /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates && zip -r templates.zip ."
+scp -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip "C:\Development\scripts\docx-templates\templates.zip"
+
+scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Development\scripts\docx-templates\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip

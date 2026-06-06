@@ -1,48 +1,12 @@
 {
-  "replace": [
-    [
-      "Location: {{ test.getTestLocationName() }}, {{ test.getTestLocationCounty() }} County, {{ test.getTestLocationState() }}",
-      "{format:bold,size14}Location: {{ test.getTestLocationName() }}, {{ test.getTestLocationCounty() }} County, {{ test.getTestLocationState() }}{/format}"
-    ],
-    [
-      "Engine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Engine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Engine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Engine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Turbine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Turbine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Turbine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Turbine: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Heater: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Heater: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Heater: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Heater: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Boiler: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Boiler: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Boiler: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Boiler: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Combustor: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Combustor: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, Unit {{ test.getTestLocationUnit() }}, {{ test.getDriverSerialNumber() }}{/format}"
-    ],
-    [
-      "Combustor: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}",
-      "{format:bold,size14}Combustor: {{ test.getDriverManufacturer() }} {{ test.getDriverModel() }}, EPN {{ test.getTestLocationUnit() }}, Unit (copy unit), {{ test.getDriverSerialNumber() }}{/format}"
-    ]
-  ]
+  "replace_table": {
+    "match": "for ftir in ftir_rawdata",
+    "replace_file": "ftir_rawdata_table.xml"
+  },
+  "landscape_table": {
+    "match": "for ftir in ftir_rawdata",
+    "margins": "0.5,0.5,0.5,0.5"
+  },
+  "section_break_before": { "match": "O2 RAW DATA" },
+  "divider": { "match": "O2 RAW DATA" }
 }

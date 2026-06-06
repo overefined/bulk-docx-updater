@@ -1,0 +1,16 @@
+{
+  "replace_table": [
+    { "match": "for ftir in calibration", "replace_file": "ftir_rawdata_table_calibration.xml" },
+    { "match": "for ftir in run1", "replace_file": "ftir_rawdata_table_run1.xml" },
+    { "match": "for ftir in run2", "replace_file": "ftir_rawdata_table_run2.xml" },
+    { "match": "for ftir in run3", "replace_file": "ftir_rawdata_table_run3.xml" }
+  ],
+  "landscape_table": [
+    { "match": "for ftir in calibration", "margins": "0.5,0.5,0.5,0.5" },
+    { "match": "for ftir in run1", "margins": "0.5,0.5,0.5,0.5" },
+    { "match": "for ftir in run2", "margins": "0.5,0.5,0.5,0.5" },
+    { "match": "for ftir in run3", "margins": "0.5,0.5,0.5,0.5" }
+  ],
+  "section_break_before": { "match": "O2 RAW DATA" },
+  "divider": { "match": "O2 RAW DATA" }
+}

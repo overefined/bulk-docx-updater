@@ -1,8 +1,0 @@
-{
-  "replace_table": [
-    {"match": "Oil as Octane (200) 191C", "replace_file": "voc_raw_table.xml"},
-    {"match": "Acetaldehyde (C2H4O) Emission Results", "replace_file": "voc_nmnehc_acetaldehyde.xml"},
-    {"match": "Ethylene (C2H4) Emission Results", "replace_file": "voc_nmnehc_ethylene.xml"},
-    {"match": "Total VOC (as C3H8)", "replace_file": "voc_total_table.xml"}
-  ]
-}

@@ -440,6 +440,55 @@ class DocxBulkUpdater:
         
         return modified
 
+    # Ordered op-dispatch pipeline: (op name, handler method name). Each handler
+    # takes (doc, op) and returns True if it modified the document. Order is
+    # significant and documented inline — e.g. insert_block must run before
+    # landscape_table so a freshly-inserted table can be located and rotated, and
+    # section_break_before must run before divider so the divider is already on
+    # its own page. (replace / xml_replace text replacements and set_comments are
+    # handled separately in modify_docx because they aren't simple (doc, op)
+    # handlers.)
+    _OP_PIPELINE = (
+        ('clear_properties',        '_op_clear_properties'),
+        ('table_header_repeat',     '_op_table_header_repeat'),
+        ('font_size',               '_op_font_size'),
+        ('set_table_column_widths', '_op_set_table_column_widths'),
+        ('cleanup_empty_after',     '_op_cleanup_empty_after'),
+        ('replace_table_cell',      'replace_table_cell'),
+        ('align_table_cells',       'align_table_cells'),
+        ('replace_image',           'replace_image'),
+        ('replace_in_table',        'replace_text_in_table'),
+        ('replace_table',           'replace_table'),
+        ('insert_block',            'insert_block'),
+        ('remove_page_break',       'remove_page_break'),
+        ('landscape_table',         'landscape_table'),
+        ('format_table',            'format_table'),
+        ('section_break_before',    'section_break_before'),
+        ('divider',                 'divider'),
+    )
+
+    # Thin adapters so ops with non-uniform signatures still expose the common
+    # (doc, op) -> bool handler shape used by _OP_PIPELINE.
+    def _op_clear_properties(self, doc: Document, op: Dict) -> bool:
+        return self.clear_core_properties(doc, op.get('properties', []))
+
+    def _op_table_header_repeat(self, doc: Document, op: Dict) -> bool:
+        return bool(self.set_table_header_repeat(
+            doc, op.get('pattern'), enable=bool(op.get('enabled', True))))
+
+    def _op_font_size(self, doc: Document, op: Dict) -> bool:
+        from_size, to_size = op.get('from'), op.get('to')
+        if from_size is None or to_size is None:
+            return False
+        return bool(self.change_font_sizes(doc, from_size, to_size))
+
+    def _op_set_table_column_widths(self, doc: Document, op: Dict) -> bool:
+        return bool(self.set_table_column_widths(doc, op))
+
+    def _op_cleanup_empty_after(self, doc: Document, op: Dict) -> bool:
+        pattern = op.get('pattern')
+        return bool(pattern) and self.remove_empty_paragraphs_after_pattern(doc, pattern)
+
     def modify_docx(self, file_path: Path) -> bool:
         """Modify a DOCX file with the specified replacements."""
         try:
@@ -452,113 +501,13 @@ class DocxBulkUpdater:
                 if self.standardize_document_margins(doc):
                     modified = True
 
-            # Clear core properties if specified
-            for op in self.operations:
-                if op.get('op') == 'clear_properties':
-                    properties = op.get('properties', [])
-                    if self.clear_core_properties(doc, properties):
-                        modified = True
-
-            # Execute non-text operations first
-            for op in self.operations:
-                if op.get('op') == 'table_header_repeat':
-                    header_pattern = op.get('pattern')
-                    enable = True if op.get('enabled', True) else False
-                    if self.set_table_header_repeat(doc, header_pattern, enable=enable):
-                        modified = True
-
-            # Change font sizes if enabled
-            for op in self.operations:
-                if op.get('op') == 'font_size':
-                    from_size = op.get('from')
-                    to_size = op.get('to')
-                    if from_size is not None and to_size is not None:
-                        if self.change_font_sizes(doc, from_size, to_size):
-                            modified = True
-
-            # Set table column widths if specified
-            for op in self.operations:
-                if op.get('op') == 'set_table_column_widths':
-                    if self.set_table_column_widths(doc, op):
-                        modified = True
-
-            # Remove empty paragraphs after patterns if cleanup is enabled
-            for op in self.operations:
-                if op.get('op') == 'cleanup_empty_after':
-                    pattern = op.get('pattern')
-                    if pattern and self.remove_empty_paragraphs_after_pattern(doc, pattern):
-                        modified = True
-
-            # Handle table cell replacements
-            for op in self.operations:
-                if op.get('op') == 'replace_table_cell':
-                    if self.replace_table_cell(doc, op):
-                        modified = True
-
-            # Handle table cell alignment
-            for op in self.operations:
-                if op.get('op') == 'align_table_cells':
-                    if self.align_table_cells(doc, op):
-                        modified = True
-
-            # Handle image replacements
-            for op in self.operations:
-                if op.get('op') == 'replace_image':
-                    if self.replace_image(doc, op):
-                        modified = True
-
-            # Handle table-specific text replacements
-            for op in self.operations:
-                if op.get('op') == 'replace_in_table':
-                    if self.replace_text_in_table(doc, op):
-                        modified = True
-
-            # Handle whole-table swaps (replace the entire <w:tbl> element)
-            for op in self.operations:
-                if op.get('op') == 'replace_table':
-                    if self.replace_table(doc, op):
-                        modified = True
-
-            # Insert new body-level blocks (paragraphs + tables) at an anchor.
-            # Runs before landscape_table so a freshly-inserted table can be
-            # located and rotated in the same config.
-            for op in self.operations:
-                if op.get('op') == 'insert_block':
-                    if self.insert_block(doc, op):
-                        modified = True
-
-            # Strip a page break from a located paragraph (runs after insert_block
-            # so a freshly-inserted section can also be targeted if needed)
-            for op in self.operations:
-                if op.get('op') == 'remove_page_break':
-                    if self.remove_page_break(doc, op):
-                        modified = True
-
-            # Wrap tables in their own landscape section (runs after replace_table
-            # so a freshly-swapped table can still be located and rotated)
-            for op in self.operations:
-                if op.get('op') == 'landscape_table':
-                    if self.landscape_table(doc, op):
-                        modified = True
-
-            # Format located tables in place (cell margins / alignment)
-            for op in self.operations:
-                if op.get('op') == 'format_table':
-                    if self.format_table(doc, op):
-                        modified = True
-
-            # Relocate a stranding section break to before a heading
-            for op in self.operations:
-                if op.get('op') == 'section_break_before':
-                    if self.section_break_before(doc, op):
-                        modified = True
-
-            # Center a divider paragraph horizontally + vertically on its own
-            # page and push following content to a new section (runs after
-            # section_break_before so the divider is already on its own page)
-            for op in self.operations:
-                if op.get('op') == 'divider':
-                    if self.divider(doc, op):
+            # Apply the ordered op pipeline. Each handler takes (doc, op) and
+            # returns True if it changed the document; order is set by
+            # _OP_PIPELINE (see its docstring for the ordering constraints).
+            for op_name, method_name in self._OP_PIPELINE:
+                handler = getattr(self, method_name)
+                for op in self.operations:
+                    if op.get('op') == op_name and handler(doc, op):
                         modified = True
 
             # Then do the text replacements and inserts

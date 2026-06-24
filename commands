@@ -4,18 +4,18 @@ python main.py /mnt/c/Development/scripts/docx-templates/templates --config ecom
 
 python3 main.py /mnt/c/Development/scripts/docx-templates/templates/FTIR_Method_2_20250617.docx --show-xml > xml
 
-scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Report Templates\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
-ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180
+scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Report Templates\templates.zip" astadmin@172.16.10.44:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@172.16.10.44
 unzip /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip -d /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates
 rm /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
 
-scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Notifications\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
-ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180
+scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Users\robert.miller\Box\Software\Notifications\templates.zip" astadmin@172.16.10.44:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@172.16.10.44
 unzip /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip -d /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates
 rm /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
 
 # Pull from the server to local
-ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180 "cd /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates && zip -r templates.zip ."
-scp -i "C:\Development\GRANDMESALX_key.pem" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip "C:\Development\scripts\docx-templates\templates.zip"
+ssh -i "C:\Development\GRANDMESALX_key.pem" astadmin@172.16.10.44 "cd /home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates && zip -r templates.zip ."
+scp -i "C:\Development\GRANDMESALX_key.pem" astadmin@172.16.10.44:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip "C:\Development\scripts\docx-templates\templates.zip"
 
-scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Development\scripts\docx-templates\templates.zip" astadmin@20.64.42.180:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip
+scp -r -i "C:\Development\GRANDMESALX_key.pem" "C:\Development\scripts\docx-templates\templates.zip" astadmin@172.16.10.44:/home/astadmin/slipstreamgrandmesa/grandmesa/grandmesa/report_templates/templates.zip

@@ -239,3 +239,107 @@ Use `{format:options}text{/format}` for inline formatting:
 ```json
 { "replace": [["PHOTOS", "Photo1paragraphbreakPhoto2paragraphbreakPhoto3"]] }
 ```
+
+## Example recipes
+
+Real configs used to retrofit report templates, kept here as reference. Each is a
+standalone dict config you pass with `-c`. Recipes that swap or insert tables
+reference an external XML fragment (a `<w:tbl>`, or for `insert_block` a `<block>`
+wrapper of paragraphs + tables, exported from Word) — see `replace_table` /
+`insert_block` above for the fragment format. Locate-by-`match` uses a unique
+substring of the table's text (often its docxtpl loop tag), which survives
+template edits that change rsid/paraId.
+
+**Swap an FTIR raw-data table for a dynamic landscape table**
+
+Replaces a fixed table with a docxtpl `{%tr for ... %}` table, rotates just that
+table's section to landscape, then moves the trailing `O2 RAW DATA` heading onto
+its own vertically-centered page.
+
+```json
+{
+  "replace_table": { "match": "for ftir in ftir_rawdata", "replace_file": "ftir_rawdata_table.xml" },
+  "landscape_table": { "match": "for ftir in ftir_rawdata", "margins": "0.5,0.5,0.5,0.5" },
+  "section_break_before": { "match": "O2 RAW DATA" },
+  "divider": { "match": "O2 RAW DATA" }
+}
+```
+
+Per-run variant — the same idea applied to a calibration plus three runs via list
+values:
+
+```json
+{
+  "replace_table": [
+    { "match": "for ftir in calibration", "replace_file": "ftir_rawdata_table_calibration.xml" },
+    { "match": "for ftir in run1", "replace_file": "ftir_rawdata_table_run1.xml" },
+    { "match": "for ftir in run2", "replace_file": "ftir_rawdata_table_run2.xml" },
+    { "match": "for ftir in run3", "replace_file": "ftir_rawdata_table_run3.xml" }
+  ],
+  "landscape_table": [
+    { "match": "for ftir in calibration", "margins": "0.5,0.5,0.5,0.5" },
+    { "match": "for ftir in run1", "margins": "0.5,0.5,0.5,0.5" },
+    { "match": "for ftir in run2", "margins": "0.5,0.5,0.5,0.5" },
+    { "match": "for ftir in run3", "margins": "0.5,0.5,0.5,0.5" }
+  ],
+  "section_break_before": { "match": "O2 RAW DATA" },
+  "divider": { "match": "O2 RAW DATA" }
+}
+```
+
+**Insert an analyzer raw-data appendix**
+
+Adds a new section ahead of `SITE PHOTOS` (idempotent via `skip_if_present`) and
+strips a stray page break from a docxtpl loop paragraph.
+
+```json
+{
+  "insert_block": { "before": "SITE PHOTOS", "replace_file": "ecom_rawdata_table.xml", "skip_if_present": "ANALYZER RAW DATA" },
+  "remove_page_break": { "in_paragraph": "{% for img in cylinder_certs %}" }
+}
+```
+
+**Swap several result tables in one pass**
+
+Locates each table by a unique substring of its text and replaces the whole
+`<w:tbl>`:
+
+```json
+{
+  "replace_table": [
+    { "match": "Oil as Octane (200) 191C", "replace_file": "voc_raw_table.xml" },
+    { "match": "Acetaldehyde (C2H4O) Emission Results", "replace_file": "voc_nmnehc_acetaldehyde.xml" },
+    { "match": "Ethylene (C2H4) Emission Results", "replace_file": "voc_nmnehc_ethylene.xml" },
+    { "match": "Total VOC (as C3H8)", "replace_file": "voc_total_table.xml" }
+  ]
+}
+```
+
+**Tighten small in-template tables**
+
+Left-justifies every cell and sets tight (28-twip) cell margins on the O2 / THC /
+fuel raw-data tables, located by their docxtpl loop tags:
+
+```json
+{
+  "format_table": [
+    { "match": "for o2 in o2_rawdata", "align": "left", "cell_margins": "28" },
+    { "match": "for thc in thc_rawdata", "align": "left", "cell_margins": "28" },
+    { "match": "for fuel in run1", "align": "left", "cell_margins": "28" }
+  ]
+}
+```
+
+**Rewrite a docxtpl expression**
+
+Plain text replacements can edit docxtpl expressions in place — e.g. dropping a
+`.strftime(...)` call so the template emits the raw timestamp:
+
+```json
+{
+  "replace": [
+    ["{{ o2.ReadingTimestamp.strftime('%H:%M:%S') }}", "{{ o2.ReadingTimestamp }}"],
+    ["{{ ftir.time_fmtd().split(' ')[-1] }}", "{{ ftir.time_fmtd() }}"]
+  ]
+}
+```

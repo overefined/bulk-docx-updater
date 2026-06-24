@@ -1,9 +1,0 @@
-{
-  "format_table": [
-    { "match": "for o2 in o2_rawdata", "align": "left", "cell_margins": "28" },
-    { "match": "for thc in thc_rawdata", "align": "left", "cell_margins": "28" },
-    { "match": "for fuel in run1", "align": "left", "cell_margins": "28" },
-    { "match": "for fuel in run2", "align": "left", "cell_margins": "28" },
-    { "match": "for fuel in run3", "align": "left", "cell_margins": "28" }
-  ]
-}

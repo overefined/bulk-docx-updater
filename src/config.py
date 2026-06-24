@@ -18,6 +18,7 @@ _OPERATION_KEYS = {
     'replace_image', 'align_table_cells', 'replace_table_cell',
     'set_table_column_widths', 'replace_in_table', 'replace_table',
     'landscape_table', 'format_table', 'section_break_before', 'divider',
+    'insert_block', 'remove_page_break',
 }
 
 # Settings keys (not operations)
@@ -243,6 +244,26 @@ def _expand_dict_config(data: Dict[str, Any], config_dir: Path) -> Tuple[List[Di
                 if not isinstance(entry, dict):
                     raise ValueError(f"divider[{i}]: must be a dict")
                 op = {"op": "divider"}
+                op.update(entry)
+                operations.append(op)
+
+        elif key == 'insert_block':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"insert_block[{i}]: must be a dict")
+                op = {"op": "insert_block"}
+                op.update(_process_file_references(entry, config_dir))
+                operations.append(op)
+
+        elif key == 'remove_page_break':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if isinstance(entry, str):
+                    entry = {"in_paragraph": entry}
+                if not isinstance(entry, dict):
+                    raise ValueError(f"remove_page_break[{i}]: must be a string or dict")
+                op = {"op": "remove_page_break"}
                 op.update(entry)
                 operations.append(op)
 
@@ -584,6 +605,29 @@ def validate_operations(operations: List[Dict[str, Any]]) -> None:
         elif op_type == 'divider':
             if 'match' not in op or not isinstance(op['match'], str):
                 logging.getLogger(__name__).error("Error: Operation %s: 'divider' requires a string 'match' field", i)
+                sys.exit(1)
+
+        elif op_type == 'insert_block':
+            if not (('before' in op) ^ ('after' in op)):
+                logging.getLogger(__name__).error("Error: Operation %s: 'insert_block' requires exactly one of 'before' or 'after'", i)
+                sys.exit(1)
+            anchor = op.get('before', op.get('after'))
+            if not isinstance(anchor, str) or not anchor.strip():
+                logging.getLogger(__name__).error("Error: Operation %s: 'insert_block' anchor ('before'/'after') must be a non-empty string", i)
+                sys.exit(1)
+            if not ('replace' in op or 'replace_file' in op):
+                logging.getLogger(__name__).error("Error: Operation %s: 'insert_block' requires 'replace' or 'replace_file' field", i)
+                sys.exit(1)
+            if 'replace' in op and not isinstance(op['replace'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'replace' must be a string", i)
+                sys.exit(1)
+            if 'skip_if_present' in op and not isinstance(op['skip_if_present'], str):
+                logging.getLogger(__name__).error("Error: Operation %s: 'skip_if_present' must be a string", i)
+                sys.exit(1)
+
+        elif op_type == 'remove_page_break':
+            if 'in_paragraph' not in op or not isinstance(op['in_paragraph'], str) or not op['in_paragraph'].strip():
+                logging.getLogger(__name__).error("Error: Operation %s: 'remove_page_break' requires a non-empty string 'in_paragraph' field", i)
                 sys.exit(1)
 
         else:

@@ -1,0 +1,26 @@
+<w:tbl>
+  <w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/><w:jc w:val="center"/><w:tblLayout w:type="autofit"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="28" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="28" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>
+  <w:tblGrid><w:gridCol w:w="550"/><w:gridCol w:w="1200"/><w:gridCol w:w="5900"/><w:gridCol w:w="450"/></w:tblGrid>
+  <w:tr><w:trPr><w:jc w:val="center"/><w:tblHeader/></w:trPr>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">Spec</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">Time</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">Phase</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{%tc for col in ftir_voc_rawdata_columns[3:] %}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{{ col }}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{%tc endfor %}</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{%tr for ftir in calibration %}</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{{ ftir.Spectrum.split('.')[0].rsplit('_', 1)[-1] }}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{{ ftir.time_fmtd() }}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{{ ftir.phase_fmtd() }}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{%tc for cell in ftir.rawdata_cells(show_voc_analytes, columns=ftir_voc_rawdata_columns)[3:] %}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{{ cell }}</w:t></w:r></w:p></w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{%tc endfor %}</w:t></w:r></w:p></w:tc>
+  </w:tr>
+  <w:tr>
+    <w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/><w:noWrap/></w:tcPr><w:p><w:pPr><w:pStyle w:val="EMITTable"/><w:jc w:val="left"/><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr></w:pPr><w:r><w:rPr><w:sz w:val="12"/><w:szCs w:val="12"/></w:rPr><w:t xml:space="preserve">{%tr endfor %}</w:t></w:r></w:p></w:tc>
+  </w:tr>
+</w:tbl>

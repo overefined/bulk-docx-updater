@@ -123,6 +123,52 @@ Provide the replacement table as inline `replace` XML or via `replace_file` (res
 
 `align_table_cells` aligns table cells containing specific text patterns. Supported alignments: `left`, `center`, `right`, `justify` (defaults to `left`).
 
+**Insert a new block (paragraphs + tables)**
+
+Inserts brand-new body-level content at an anchor paragraph located by text.
+Unlike `replace_table` (which swaps an *existing* `<w:tbl>`), this *adds* content,
+so it can introduce a section that didn't exist before — e.g. a new raw-data
+appendix.
+
+```json
+{ "insert_block": {"before": "SITE PHOTOS", "replace_file": "ecom_rawdata_table.xml", "skip_if_present": "ANALYZER RAW DATA"} }
+{ "insert_block": {"after": "CALIBRATION CERTIFICATES", "replace": "<block><w:p>...</w:p><w:tbl>...</w:tbl></block>"} }
+{ "insert_block": [ {"before": "SITE PHOTOS", "replace_file": "a.xml"}, {"after": "NOTES", "replace_file": "b.xml"} ] }
+```
+
+- `before` / `after` (exactly one): text of the anchor paragraph. Exact (stripped)
+  match preferred, falls back to the first paragraph containing the text. The block
+  is inserted immediately before / after that paragraph.
+- `replace` / `replace_file`: the XML to insert. Several top-level elements
+  (paragraphs, tables) must be wrapped in a single root element (e.g.
+  `<block> ... </block>`); the root's children are inserted in order and the
+  wrapper is discarded. Standard Word namespace prefixes are injected if the root
+  doesn't declare them.
+- `skip_if_present` (optional): if this text already appears anywhere in the
+  document body, the insert is skipped — making re-runs idempotent.
+
+Runs before `landscape_table`, so a freshly-inserted table can be located and
+rotated in the same config.
+
+**Remove a page break from a paragraph**
+
+Strips every `<w:br w:type="page"/>` from the paragraph located by text (and drops
+the run if that leaves it empty). Operates on the element tree, so it's robust to
+XML whitespace/serialization — unlike a literal `xml_replace`. A
+`<w:lastRenderedPageBreak/>` render hint is left untouched.
+
+```json
+{ "remove_page_break": "{% for img in cylinder_certs %}" }
+{ "remove_page_break": {"in_paragraph": "CALIBRATION CERTIFICATES"} }
+{ "remove_page_break": [ {"in_paragraph": "foo"}, {"in_paragraph": "bar"} ] }
+```
+
+- `in_paragraph`: text identifying the paragraph (exact stripped match preferred,
+  falls back to the first paragraph containing the text). The string form is
+  shorthand for `{"in_paragraph": ...}`.
+
+Runs after `insert_block`, so a freshly-inserted section can also be targeted.
+
 **Landscape table**
 
 Wraps a located table in its own landscape section, leaving the surrounding content in its original orientation. Useful for wide tables (many columns) that overflow a portrait page and wrap unreadably. Inserts a section break before the table and a landscape section break after it.

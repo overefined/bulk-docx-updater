@@ -519,6 +519,21 @@ class DocxBulkUpdater:
                     if self.replace_table(doc, op):
                         modified = True
 
+            # Insert new body-level blocks (paragraphs + tables) at an anchor.
+            # Runs before landscape_table so a freshly-inserted table can be
+            # located and rotated in the same config.
+            for op in self.operations:
+                if op.get('op') == 'insert_block':
+                    if self.insert_block(doc, op):
+                        modified = True
+
+            # Strip a page break from a located paragraph (runs after insert_block
+            # so a freshly-inserted section can also be targeted if needed)
+            for op in self.operations:
+                if op.get('op') == 'remove_page_break':
+                    if self.remove_page_break(doc, op):
+                        modified = True
+
             # Wrap tables in their own landscape section (runs after replace_table
             # so a freshly-swapped table can still be located and rotated)
             for op in self.operations:
@@ -1256,6 +1271,129 @@ class DocxBulkUpdater:
 
         except Exception as e:
             self._logger.error(f"Error replacing table: {e}")
+            return False
+
+    def insert_block(self, doc: Document, op: Dict) -> bool:
+        """Insert new body-level content (paragraphs and/or tables) at an anchor
+        paragraph located by text.
+
+        Unlike replace_table (which swaps an existing <w:tbl>), this adds brand
+        new content, so it can introduce a section that didn't exist before —
+        e.g. a new raw-data appendix.
+
+        Config keys:
+            - before / after: text of the anchor paragraph (exactly one). The
+              block is inserted immediately before / after that paragraph.
+            - replace / replace_file: the XML to insert. Several top-level
+              elements (paragraphs, tables) must be wrapped in a single root
+              element (e.g. <block> ... </block>); the root's children are
+              inserted in order and the wrapper itself is discarded. Standard
+              Word namespace prefixes are injected if the root doesn't declare
+              them.
+            - skip_if_present: optional text; if it already appears anywhere in
+              the document body, the insert is skipped (idempotent re-runs).
+        """
+        try:
+            new_xml = op.get('replace')
+            if not new_xml:
+                self._logger.warning("insert_block: no XML provided")
+                return False
+
+            insert_after = 'after' in op
+            anchor_text = op.get('after') if insert_after else op.get('before')
+
+            body = doc.element.body
+
+            skip_text = op.get('skip_if_present')
+            if skip_text:
+                body_text = "".join(t.text or "" for t in body.iter(qn('w:t')))
+                if skip_text in body_text:
+                    self._logger.debug(
+                        f"insert_block: '{skip_text}' already present; skipping")
+                    return False
+
+            anchor = self._find_paragraph_by_text(body, anchor_text)
+            if anchor is None:
+                self._logger.warning(
+                    f"insert_block: no paragraph matching '{anchor_text}'")
+                return False
+
+            # Parse the wrapper; inject namespace declarations if the root
+            # doesn't declare them (hand-written fragments using w:/w14:/... ).
+            try:
+                root = parse_xml(new_xml)
+            except Exception:
+                if 'xmlns:w' not in new_xml:
+                    patched = re.sub(r'^\s*<(\w+)\b', rf'<\1 {self._WORD_NSDECLS}', new_xml, count=1)
+                    root = parse_xml(patched)
+                else:
+                    raise
+
+            children = list(root)
+            if not children:
+                self._logger.warning("insert_block: wrapper element has no children to insert")
+                return False
+
+            if insert_after:
+                # addnext reverses order, so walk children back to front.
+                for child in reversed(children):
+                    anchor.addnext(child)
+            else:
+                for child in children:
+                    anchor.addprevious(child)
+
+            self._logger.info(
+                f"Inserted {len(children)} element(s) "
+                f"{'after' if insert_after else 'before'} '{anchor_text}'")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error applying insert_block: {e}")
+            return False
+
+    def remove_page_break(self, doc: Document, op: Dict) -> bool:
+        """Remove page break(s) from the paragraph located by text.
+
+        Strips every ``<w:br w:type="page"/>`` in the matched paragraph (and drops
+        the run if that leaves it empty). Operates on the element tree, so it is
+        robust to XML whitespace/serialization — unlike a literal xml_replace.
+
+        ``<w:lastRenderedPageBreak/>`` (a render hint, not a real break) is left
+        untouched.
+
+        Config keys:
+            - in_paragraph: text identifying the paragraph (exact stripped match
+              preferred, falls back to the first paragraph containing the text).
+        """
+        try:
+            text = op.get('in_paragraph')
+            body = doc.element.body
+            target = self._find_paragraph_by_text(body, text)
+            if target is None:
+                self._logger.warning(
+                    f"remove_page_break: no paragraph matching '{text}'")
+                return False
+
+            removed = False
+            for run in list(target.findall(qn('w:r'))):
+                run_changed = False
+                for br in run.findall(qn('w:br')):
+                    if br.get(qn('w:type')) == 'page':
+                        run.remove(br)
+                        run_changed = True
+                        removed = True
+                # Drop the run if stripping its break left it empty.
+                if run_changed and len(run) == 0 and not (run.text or '').strip():
+                    target.remove(run)
+
+            if removed:
+                self._logger.info(f"Removed page break from paragraph '{text}'")
+            else:
+                self._logger.debug(f"remove_page_break: no page break in '{text}'")
+            return removed
+
+        except Exception as e:
+            self._logger.error(f"Error applying remove_page_break: {e}")
             return False
 
     def landscape_table(self, doc: Document, op: Dict) -> bool:

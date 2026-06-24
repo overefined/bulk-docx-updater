@@ -1,5 +1,6 @@
 source .venv/bin/activate
 python main.py /mnt/c/Development/scripts/docx-templates/templates -c replace.json
+python main.py /mnt/c/Development/scripts/docx-templates/templates --config ecom_rawdata.json
 
 python3 main.py /mnt/c/Development/scripts/docx-templates/templates/FTIR_Method_2_20250617.docx --show-xml > xml
 

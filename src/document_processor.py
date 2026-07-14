@@ -458,6 +458,7 @@ class DocxBulkUpdater:
         ('align_table_cells',       'align_table_cells'),
         ('replace_image',           'replace_image'),
         ('replace_in_table',        'replace_text_in_table'),
+        ('merge_tables',            'merge_tables'),
         ('replace_table',           'replace_table'),
         ('insert_block',            'insert_block'),
         ('remove_page_break',       'remove_page_break'),
@@ -1220,6 +1221,129 @@ class DocxBulkUpdater:
 
         except Exception as e:
             self._logger.error(f"Error replacing table: {e}")
+            return False
+
+    @staticmethod
+    def _row_text(tr) -> str:
+        """Normalized visible text of a <w:tr> row, for comparing rows.
+
+        Collapses all runs of whitespace (including non-breaking spaces) to a
+        single space so trivial spacer-cell differences between an original
+        table and its continuation copies don't defeat duplicate detection.
+        """
+        joined = ' '.join(t.text or '' for t in tr.iter(qn('w:t')))
+        return ' '.join(joined.split())
+
+    @staticmethod
+    def _paragraph_is_empty(el) -> bool:
+        """True if a <w:p> has no visible text (page breaks / empty runs only)."""
+        return el.tag == qn('w:p') and not ''.join(
+            t.text or '' for t in el.iter(qn('w:t'))).strip()
+
+    def _find_all_tables_for_merge(self, doc: Document, op: Dict):
+        """Return every table matching the locator, in body order.
+
+        Uses the same header-row / substring matching as replace_table, but
+        collects all matches instead of the first. table_index is rejected
+        because merging needs two or more tables to combine.
+        """
+        table_header = op.get('table_header')
+        header_row_index = op.get('header_row', 0)
+        match_text = op.get('match')
+        matches = []
+
+        for table in doc.tables:
+            if table_header is not None:
+                if len(table.rows) <= header_row_index:
+                    continue
+                row = table.rows[header_row_index]
+                header_tab = '\t'.join(c.text.strip() for c in row.cells)
+                header_comma = ', '.join(c.text.strip() for c in row.cells)
+                header_space = ' '.join(c.text.strip() for c in row.cells)
+                if (table_header == header_tab or table_header == header_comma
+                        or table_header == header_space or table_header in header_space):
+                    matches.append(table)
+            elif match_text is not None:
+                full_text = '\n'.join(c.text for r in table.rows for c in r.cells)
+                if match_text in full_text:
+                    matches.append(table)
+
+        return matches
+
+    def merge_tables(self, doc: Document, op: Dict) -> bool:
+        """Merge consecutive tables that share a header into a single table.
+
+        Documents rendered from split templates often repeat the same table
+        (identical title + header block) several times, one continuation per
+        page. This op locates every table matching the locator, keeps the
+        first, and appends each later table's data rows to it — dropping the
+        duplicated leading header rows so the result is one continuous table
+        with no repeated rows. The now-empty continuation tables and the blank
+        (page-break) paragraphs that separated them are removed.
+
+        Config keys:
+            - table_header / match: locate the tables to merge (same matching
+              as replace_table). table_index is not accepted.
+            - header_row: header row index for table_header matching (default 0).
+            - skip_rows: rows to drop from the front of each continuation table.
+              If omitted, the identical leading rows (compared against the first
+              table) are auto-detected and dropped.
+
+        Idempotent: once merged, only one table matches, so a re-run is a no-op.
+        """
+        try:
+            tables = self._find_all_tables_for_merge(doc, op)
+            if len(tables) < 2:
+                self._logger.debug("merge_tables: fewer than 2 matching tables; nothing to merge")
+                return False
+
+            target_tbl = tables[0]._tbl
+            body = target_tbl.getparent()
+            if body is None:
+                self._logger.warning("merge_tables: target table has no parent")
+                return False
+
+            skip_rows = op.get('skip_rows')
+            target_texts = [self._row_text(tr) for tr in target_tbl.findall(qn('w:tr'))]
+
+            # Position of every relevant element up front (indices are stable
+            # because we only remove afterwards).
+            children = list(body)
+            consumed = {id(t._tbl) for t in tables[1:]}
+            first_pos = children.index(target_tbl)
+            last_pos = children.index(tables[-1]._tbl)
+
+            # Move data rows from each continuation table into the first table.
+            for other in tables[1:]:
+                other_tbl = other._tbl
+                rows = other_tbl.findall(qn('w:tr'))
+                if skip_rows is not None:
+                    n_skip = skip_rows
+                else:
+                    n_skip = 0
+                    for i, tr in enumerate(rows):
+                        if i < len(target_texts) and self._row_text(tr) == target_texts[i]:
+                            n_skip += 1
+                        else:
+                            break
+                for tr in rows[n_skip:]:
+                    target_tbl.append(tr)  # moves the element out of other_tbl
+
+            # Remove the emptied continuation tables and the blank separator
+            # paragraphs between them (leave any real content untouched).
+            removed = 0
+            for pos in range(first_pos + 1, last_pos + 1):
+                el = children[pos]
+                if id(el) in consumed or self._paragraph_is_empty(el):
+                    el.getparent().remove(el)
+                    removed += 1
+
+            self._logger.info(
+                f"Merged {len(tables)} tables into one; removed {removed} intervening element(s)")
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error merging tables: {e}")
             return False
 
     def insert_block(self, doc: Document, op: Dict) -> bool:

@@ -123,6 +123,17 @@ Provide the replacement table as inline `replace` XML or via `replace_file` (res
 
 `align_table_cells` aligns table cells containing specific text patterns. Supported alignments: `left`, `center`, `right`, `justify` (defaults to `left`).
 
+**Merge repeated tables into one**
+
+Documents rendered from split templates often repeat the same table (identical title + header block) once per page. `merge_tables` folds every matching table into the first, appending each continuation's data rows and dropping the duplicated leading header rows, so the result is a single continuous table with no repeated rows. The emptied continuation tables and the blank (page-break) paragraphs that separated them are removed.
+
+```json
+{ "merge_tables": {"match": "NMNEHC Test Results"} }
+{ "merge_tables": {"table_header": "NMNEHC Test Results", "skip_rows": 11} }
+```
+
+Locate the tables with `match` (substring) or `table_header` (header-row text match, with `header_row` for the header row index) — the same matching as `replace_table`, but `table_index` isn't accepted since merging needs two or more tables. By default the duplicated leading rows are auto-detected (the identical prefix each continuation shares with the first table, compared with whitespace normalized so stray spacer/non-breaking-space differences don't defeat detection); set `skip_rows` to drop a fixed number instead. Re-running is idempotent — once merged, only one table matches, so nothing changes.
+
 **Insert a new block (paragraphs + tables)**
 
 Inserts brand-new body-level content at an anchor paragraph located by text.

@@ -17,8 +17,8 @@ _OPERATION_KEYS = {
     'set_comments', 'table_header_repeat', 'cleanup_empty_after',
     'replace_image', 'align_table_cells', 'replace_table_cell',
     'set_table_column_widths', 'replace_in_table', 'replace_table',
-    'landscape_table', 'format_table', 'section_break_before', 'divider',
-    'insert_block', 'remove_page_break',
+    'merge_tables', 'landscape_table', 'format_table', 'section_break_before',
+    'divider', 'insert_block', 'remove_page_break',
 }
 
 # Op keys whose value is a single dict, or a list of dicts, each expanded
@@ -29,7 +29,8 @@ _OPERATION_KEYS = {
 _SIMPLE_DICT_OPS = (
     'replace_image', 'align_table_cells', 'replace_table_cell',
     'set_table_column_widths', 'replace_in_table', 'replace_table',
-    'landscape_table', 'format_table', 'section_break_before', 'divider',
+    'merge_tables', 'landscape_table', 'format_table', 'section_break_before',
+    'divider',
 )
 
 # Settings keys (not operations)
@@ -344,6 +345,15 @@ def _v_replace_table(op, i):
         _fail(i, "'replace_table' requires one of 'table_index', 'table_header', or 'match' to locate the table")
 
 
+def _v_merge_tables(op, i):
+    if not any(k in op for k in ('table_header', 'match')):
+        _fail(i, "'merge_tables' requires 'table_header' or 'match' to locate the tables")
+    if 'skip_rows' in op and (not isinstance(op['skip_rows'], int) or op['skip_rows'] < 0):
+        _fail(i, "'skip_rows' must be a non-negative integer")
+    if 'header_row' in op and (not isinstance(op['header_row'], int) or op['header_row'] < 0):
+        _fail(i, "'header_row' must be a non-negative integer")
+
+
 def _v_landscape_table(op, i):
     if not any(k in op for k in ('table_index', 'table_header', 'match')):
         _fail(i, "'landscape_table' requires one of 'table_index', 'table_header', or 'match' to locate the table")
@@ -498,6 +508,7 @@ _OP_VALIDATORS = {
     'font_size': _v_font_size,
     'replace_table_cell': _v_replace_table_cell,
     'replace_table': _v_replace_table,
+    'merge_tables': _v_merge_tables,
     'landscape_table': _v_landscape_table,
     'format_table': _v_format_table,
     'section_break_before': _v_section_break_before,

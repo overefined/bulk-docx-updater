@@ -460,6 +460,7 @@ class DocxBulkUpdater:
         ('replace_in_table',        'replace_text_in_table'),
         ('merge_tables',            'merge_tables'),
         ('replace_table',           'replace_table'),
+        ('replace_block',           'replace_block'),
         ('insert_block',            'insert_block'),
         ('remove_page_break',       'remove_page_break'),
         ('landscape_table',         'landscape_table'),
@@ -617,6 +618,12 @@ class DocxBulkUpdater:
                     else:
                         loc = f"table containing '{op.get('match')}'"
                     operation_results.append(f"Replaced entire {loc} with new table XML")
+
+            if op.get('op') == 'replace_block':
+                if self.replace_block(modified_doc, op):
+                    act = "Replaced" if op.get('replace') else "Removed"
+                    operation_results.append(
+                        f"{act} block from '{op.get('from')}' to '{op.get('to')}'")
 
         # Apply standard text replacements
         self._process_all_text_replacements(modified_doc)
@@ -1344,6 +1351,140 @@ class DocxBulkUpdater:
 
         except Exception as e:
             self._logger.error(f"Error merging tables: {e}")
+            return False
+
+    def replace_block(self, doc: Document, op: Dict) -> bool:
+        """Remove a contiguous range of body-level elements (paragraphs and/or
+        tables) delimited by text anchors, optionally inserting new XML in their
+        place.
+
+        Unlike insert_block (which only adds) or replace_table (which swaps a
+        single <w:tbl>), this deletes an arbitrary run of body-level siblings
+        located by a 'from' and a 'to' anchor — so it can drop a whole
+        sub-section (headings + equations + a table) or swap it for new content,
+        while leaving each document's own numbering/layout outside the range
+        untouched.
+
+        Config keys:
+            - from: text of the first anchor (a body paragraph; exact-stripped
+              match preferred, else the first paragraph containing the text).
+            - to: text identifying the last anchor at or after 'from' (paragraph
+              OR table — the first body element whose text contains it).
+            - keep_from / keep_to: if true, that anchor element is left in place
+              and the removed range starts after / ends before it (default
+              false: the anchor elements are themselves removed).
+            - replace / replace_file: optional XML wrapped in a single root
+              element (e.g. <block> ... </block>); its children are inserted
+              where the removed range began, and the wrapper is discarded. Omit
+              for a pure deletion. Standard Word namespace prefixes are injected
+              if the root doesn't declare them.
+            - skip_if_present: optional; if this text already appears anywhere in
+              the body, the op is skipped. (A run is also naturally idempotent
+              when the edit removes the 'to' text, so the anchor can't be found
+              on a re-run.)
+
+        Runs after replace_table (so a freshly-swapped table can bound a range)
+        and before insert_block / landscape_table.
+        """
+        try:
+            from_text = op.get('from', '')
+            to_text = op.get('to', '')
+            body = doc.element.body
+
+            skip_text = op.get('skip_if_present')
+            if skip_text:
+                body_text = "".join(t.text or "" for t in body.iter(qn('w:t')))
+                if skip_text in body_text:
+                    self._logger.debug(
+                        f"replace_block: '{skip_text}' already present; skipping")
+                    return False
+
+            children = list(body)
+
+            # Locate the 'from' paragraph (index into children): prefer an exact
+            # stripped text match, fall back to the first paragraph containing it.
+            ft = from_text.strip()
+            i_from = i_contains = None
+            for k, el in enumerate(children):
+                if el.tag != qn('w:p'):
+                    continue
+                t = "".join(x.text or "" for x in el.iter(qn('w:t'))).strip()
+                if t == ft and i_from is None:
+                    i_from = k
+                elif ft in t and i_contains is None:
+                    i_contains = k
+            if i_from is None:
+                i_from = i_contains
+            if i_from is None:
+                self._logger.warning(
+                    f"replace_block: no paragraph matching 'from' = '{from_text}'")
+                return False
+
+            # Locate the 'to' element (paragraph or table) at or after 'from'.
+            i_to = None
+            for j in range(i_from, len(children)):
+                el_text = "".join(t.text or "" for t in children[j].iter(qn('w:t')))
+                if to_text in el_text:
+                    i_to = j
+                    break
+            if i_to is None:
+                self._logger.warning(
+                    f"replace_block: no element containing 'to' = '{to_text}' "
+                    f"at or after 'from'")
+                return False
+
+            keep_from = bool(op.get('keep_from'))
+            keep_to = bool(op.get('keep_to'))
+            start = i_from + (1 if keep_from else 0)
+            end = i_to - (1 if keep_to else 0)
+            to_remove = children[start:end + 1] if end >= start else []
+
+            # Reference element the removed range began at (new content is
+            # inserted immediately before it).
+            if to_remove:
+                ref = to_remove[0]
+            elif end + 1 < len(children):
+                ref = children[end + 1]
+            else:
+                ref = None
+
+            new_children = []
+            new_xml = op.get('replace')
+            if new_xml:
+                try:
+                    root = parse_xml(new_xml)
+                except Exception:
+                    if 'xmlns:w' not in new_xml:
+                        patched = re.sub(r'^\s*<(\w+)\b', rf'<\1 {self._WORD_NSDECLS}', new_xml, count=1)
+                        root = parse_xml(patched)
+                    else:
+                        raise
+                new_children = list(root)
+
+            if not to_remove and not new_children:
+                self._logger.debug(
+                    "replace_block: empty range and no replacement; nothing to do")
+                return False
+
+            if new_children:
+                if ref is not None:
+                    for child in new_children:
+                        ref.addprevious(child)
+                else:
+                    for child in new_children:
+                        body.append(child)
+
+            for el in to_remove:
+                body.remove(el)
+
+            self._logger.info(
+                f"replace_block: removed {len(to_remove)} element(s) from "
+                f"'{from_text}' to '{to_text}'"
+                + (f", inserted {len(new_children)}" if new_children else ""))
+            return True
+
+        except Exception as e:
+            self._logger.error(f"Error applying replace_block: {e}")
             return False
 
     def insert_block(self, doc: Document, op: Dict) -> bool:

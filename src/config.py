@@ -18,7 +18,7 @@ _OPERATION_KEYS = {
     'replace_image', 'align_table_cells', 'replace_table_cell',
     'set_table_column_widths', 'replace_in_table', 'replace_table',
     'merge_tables', 'landscape_table', 'format_table', 'section_break_before',
-    'divider', 'insert_block', 'remove_page_break',
+    'divider', 'insert_block', 'remove_page_break', 'replace_block',
 }
 
 # Op keys whose value is a single dict, or a list of dicts, each expanded
@@ -196,6 +196,15 @@ def _expand_dict_config(data: Dict[str, Any], config_dir: Path) -> Tuple[List[Di
                     raise ValueError(f"remove_page_break[{i}]: must be a string or dict")
                 op = {"op": "remove_page_break"}
                 op.update(entry)
+                operations.append(op)
+
+        elif key == 'replace_block':
+            entries = value if isinstance(value, list) else [value]
+            for i, entry in enumerate(entries):
+                if not isinstance(entry, dict):
+                    raise ValueError(f"replace_block[{i}]: must be a dict")
+                op = {"op": "replace_block"}
+                op.update(_process_file_references(entry, config_dir))
                 operations.append(op)
 
     return operations, settings
@@ -499,6 +508,19 @@ def _v_remove_page_break(op, i):
         _fail(i, "'remove_page_break' requires a non-empty string 'in_paragraph' field")
 
 
+def _v_replace_block(op, i):
+    for anchor in ('from', 'to'):
+        if anchor not in op or not isinstance(op[anchor], str) or not op[anchor].strip():
+            _fail(i, "'replace_block' requires a non-empty string '%s' field", anchor)
+    if 'replace' in op and not isinstance(op['replace'], str):
+        _fail(i, "'replace' must be a string")
+    for flag in ('keep_from', 'keep_to'):
+        if flag in op and not isinstance(op[flag], bool):
+            _fail(i, "'%s' must be boolean", flag)
+    if 'skip_if_present' in op and not isinstance(op['skip_if_present'], str):
+        _fail(i, "'skip_if_present' must be a string")
+
+
 # op name -> validator. 'replace' and 'xml_replace' share one validator.
 _OP_VALIDATORS = {
     'replace': _v_replace,
@@ -521,6 +543,7 @@ _OP_VALIDATORS = {
     'divider': _v_divider,
     'insert_block': _v_insert_block,
     'remove_page_break': _v_remove_page_break,
+    'replace_block': _v_replace_block,
 }
 
 

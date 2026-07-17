@@ -1,5 +1,61 @@
 {
-  "merge_tables": {
-    "match": "NMNEHC Test Results"
-  }
+  "replace_table": [
+    {
+      "match": "PROPANE CALIBRATION ERROR",
+      "replace_file": "propane_cal_error_table.xml"
+    },
+    {
+      "match": "PROPANE SYSTEM BIAS AND DRIFT",
+      "replace_file": "propane_system_drift_table.xml"
+    }
+  ],
+  "replace_block": [
+    {
+      "from": "The drift determination is outlined",
+      "to": "HFID ANALYZER ACCURACY",
+      "keep_from": true
+    },
+    {
+      "from": "Equation 5-7: Drift Assessment",
+      "to": "DHFID = HFID Drift assessment, percent of calibration span",
+      "keep_from": true,
+      "replace_file": "eq57_drift.xml"
+    },
+    {
+      "from": "Equation 8-10: Drift Assessment",
+      "to": "DHFID = HFID Drift assessment, percent of calibration span",
+      "keep_from": true,
+      "replace_file": "eq57_drift.xml"
+    },
+    {
+      "from": "Equation 4-10: Drift Assessment",
+      "to": "DHFID = HFID Drift assessment, percent of calibration span",
+      "keep_from": true,
+      "replace_file": "eq57_drift.xml"
+    }
+  ],
+  "insert_block": [
+    {
+      "before": "Equation 5-7: Drift Assessment",
+      "replace_file": "hfid_calerr_5-6.xml",
+      "skip_if_present": "Predicted lean equation slope"
+    },
+    {
+      "before": "Equation 8-10: Drift Assessment",
+      "replace_file": "hfid_calerr_8-9.xml",
+      "skip_if_present": "Predicted lean equation slope"
+    },
+    {
+      "before": "Equation 4-10: Drift Assessment",
+      "replace_file": "hfid_calerr_4-9.xml",
+      "skip_if_present": "Predicted lean equation slope"
+    }
+  ],
+  "replace": [
+    {
+      "search": "(?<!used\\. )The drift determination is outlined in method 25A section 8\\.6\\.2\\. The drift for each run, the low-level and upscale drift must be less than or equal to 3\\.0 percent of the calibration span\\.",
+      "replace": "Calibration error is determined and must be less than or equal to 5.0 percent of calibration gas used. The drift determination is outlined in method 25A section 8.6.2. The drift for each run, the low-level and upscale drift must be less than or equal to 3.0 percent of the calibration span.",
+      "regex": true
+    }
+  ]
 }

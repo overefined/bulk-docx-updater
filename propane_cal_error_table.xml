@@ -1,0 +1,1062 @@
+<w:tbl xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" xmlns:cx2="http://schemas.microsoft.com/office/drawing/2015/10/21/chartex" xmlns:cx3="http://schemas.microsoft.com/office/drawing/2016/5/9/chartex" xmlns:cx4="http://schemas.microsoft.com/office/drawing/2016/5/10/chartex" xmlns:cx5="http://schemas.microsoft.com/office/drawing/2016/5/11/chartex" xmlns:cx6="http://schemas.microsoft.com/office/drawing/2016/5/12/chartex" xmlns:cx7="http://schemas.microsoft.com/office/drawing/2016/5/13/chartex" xmlns:cx8="http://schemas.microsoft.com/office/drawing/2016/5/14/chartex" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:aink="http://schemas.microsoft.com/office/drawing/2016/ink" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:oel="http://schemas.microsoft.com/office/2019/extlst" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:w16cex="http://schemas.microsoft.com/office/word/2018/wordml/cex" xmlns:w16cid="http://schemas.microsoft.com/office/word/2016/wordml/cid" xmlns:w16="http://schemas.microsoft.com/office/word/2018/wordml" xmlns:w16du="http://schemas.microsoft.com/office/word/2023/wordml/word16du" xmlns:w16sdtdh="http://schemas.microsoft.com/office/word/2020/wordml/sdtdatahash" xmlns:w16sdtfl="http://schemas.microsoft.com/office/word/2024/wordml/sdtformatlock" xmlns:w16se="http://schemas.microsoft.com/office/word/2015/wordml/symex" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+  <w:tblPr>
+    <w:tblStyle w:val="TableGrid"/>
+    <w:tblW w:w="9900" w:type="dxa"/>
+    <w:jc w:val="center"/>
+    <w:tblBorders>
+      <w:top w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+      <w:left w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+      <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+      <w:right w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+      <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+      <w:insideV w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+    </w:tblBorders>
+    <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+    <w:tblLayout w:type="fixed"/>
+    <w:tblCellMar>
+      <w:top w:w="58" w:type="dxa"/>
+      <w:left w:w="115" w:type="dxa"/>
+      <w:bottom w:w="58" w:type="dxa"/>
+      <w:right w:w="115" w:type="dxa"/>
+    </w:tblCellMar>
+    <w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>
+  </w:tblPr>
+  <w:tblGrid>
+    <w:gridCol w:w="3060"/>
+    <w:gridCol w:w="1800"/>
+    <w:gridCol w:w="1800"/>
+    <w:gridCol w:w="1620"/>
+    <w:gridCol w:w="1620"/>
+  </w:tblGrid>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="009606D0" w14:paraId="40C03BF8" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="201"/>
+      <w:tblHeader/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="9900" w:type="dxa"/>
+        <w:gridSpan w:val="5"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:left w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:bottom w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:right w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="000000" w:themeFill="text1"/>
+      </w:tcPr>
+      <w:p w14:paraId="08730CD7" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="center"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="FFFFFF" w:themeColor="background1"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="FFFFFF" w:themeColor="background1"/>
+          </w:rPr>
+          <w:t>PROPANE CALIBRATION ERROR</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="009606D0" w14:paraId="1F9BBDDC" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="201"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:bottom w:val="nil"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="BFBFBF" w:themeFill="background1" w:themeFillShade="BF"/>
+        <w:vAlign w:val="bottom"/>
+      </w:tcPr>
+      <w:p w14:paraId="29C964D9" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:bottom w:val="nil"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="BFBFBF" w:themeFill="background1" w:themeFillShade="BF"/>
+      </w:tcPr>
+      <w:p w14:paraId="2E2EA4D0" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="center"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Zero</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:bottom w:val="nil"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="BFBFBF" w:themeFill="background1" w:themeFillShade="BF"/>
+        <w:vAlign w:val="center"/>
+      </w:tcPr>
+      <w:p w14:paraId="4E757A15" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="center"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Low</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:bottom w:val="nil"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="BFBFBF" w:themeFill="background1" w:themeFillShade="BF"/>
+        <w:vAlign w:val="center"/>
+      </w:tcPr>
+      <w:p w14:paraId="0BD94C27" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="center"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Mid</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="12" w:space="0" w:color="auto"/>
+          <w:bottom w:val="nil"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="BFBFBF" w:themeFill="background1" w:themeFillShade="BF"/>
+        <w:vAlign w:val="center"/>
+      </w:tcPr>
+      <w:p w14:paraId="2A4B2373" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="center"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:b/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="20"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>High</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="009606D0" w14:paraId="5768853F" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="138"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="nil"/>
+          <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="34CF548C" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Calibri" w:cs="Arial"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Cylinder Reference</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="nil"/>
+          <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="10EB5E79" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.O2LowCylNumber }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="nil"/>
+          <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="3093F2BE" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCLowerMidCylNumber}}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="nil"/>
+          <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="36D43200" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCUpperMidCylNumber}}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="nil"/>
+          <w:bottom w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="058EEEB7" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCHighCylNumber }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="009606D0" w14:paraId="1C165ACE" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="138"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="5FCCA684" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Calibration Gas Value (C</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+            <w:vertAlign w:val="subscript"/>
+          </w:rPr>
+          <w:t>VHFID</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="491CED9E" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.O2LowCylValue }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="75D4B42A" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCLowerMidCylValue}}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="7C10B36E" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCUpperMidCylValue}}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:tcBorders>
+          <w:top w:val="single" w:sz="6" w:space="0" w:color="000000" w:themeColor="text1"/>
+        </w:tcBorders>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="27C06CB0" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCHighCylValue }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00DF0FDF" w:rsidRPr="009606D0" w14:paraId="63BC3995" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="138"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="2EB19E81" w14:textId="7A989E80" w:rsidR="00DF0FDF" w:rsidRPr="00DF0FDF" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Predicted Value (C</w:t>
+        </w:r>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+            <w:vertAlign w:val="subscript"/>
+          </w:rPr>
+          <w:t>Predicted</w:t>
+        </w:r>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="6F1A8C28" w14:textId="4C058BB6" w:rsidR="00DF0FDF" w:rsidRPr="009606D0" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>-</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="687FDDCE" w14:textId="2E122817" w:rsidR="00DF0FDF" w:rsidRPr="009606D0" w:rsidRDefault="00C12CE8" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>THCLowerMid</w:t>
+        </w:r>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>_predicted_val }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="0C6D0AAB" w14:textId="384BE7B6" w:rsidR="00DF0FDF" w:rsidRPr="009606D0" w:rsidRDefault="00C12CE8" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCUpperMid_predicted_val }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="4E3F0C00" w14:textId="49049D8E" w:rsidR="00DF0FDF" w:rsidRPr="009606D0" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>-</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="009606D0" w14:paraId="58EB0113" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="138"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="20A65386" w14:textId="11BE3868" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Analyzer Response (C</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+            <w:vertAlign w:val="subscript"/>
+          </w:rPr>
+          <w:t>HFID</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="27DF087C" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCLow_analyzer_resp }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="3255377E" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCLowerMid_analyzer_resp }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="0A3EAA54" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCUpperMid_analyzer_resp }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="21190BEB" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCHigh_analyzer_resp }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="009606D0" w14:paraId="2DA1F553" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="138"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="4A95136A" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Calibration Span (CS</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+            <w:vertAlign w:val="subscript"/>
+          </w:rPr>
+          <w:t>HFID</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="5416975B" w14:textId="4DF3667E" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>-</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="01B973B3" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCHigh_cal_span }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="4298543F" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCHigh_cal_span }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="68E4D3E5" w14:textId="2B3564F3" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+          </w:rPr>
+          <w:t>-</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr w:rsidR="00491B4F" w:rsidRPr="002020F4" w14:paraId="0C9C93C8" w14:textId="77777777" w:rsidTr="00265B50">
+    <w:trPr>
+      <w:trHeight w:val="138"/>
+      <w:jc w:val="center"/>
+    </w:trPr>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="3060" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="394D31AB" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:spacing w:after="0"/>
+          <w:jc w:val="right"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>Calibration Error (ACE</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+            <w:vertAlign w:val="subscript"/>
+          </w:rPr>
+          <w:t>HFID</w:t>
+        </w:r>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:color w:val="000000"/>
+            <w:sz w:val="18"/>
+            <w:szCs w:val="20"/>
+          </w:rPr>
+          <w:t>)</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="61772FA8" w14:textId="3FD44850" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+          <w:t>-</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1800" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="346C2543" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCLowerMid_cal_error }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="33DE3E07" w14:textId="77777777" w:rsidR="00491B4F" w:rsidRPr="009606D0" w:rsidRDefault="00491B4F" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r w:rsidRPr="009606D0">
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+          <w:t>{{ o2_qaqc.THCUpperMid_cal_error }}</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:tcW w:w="1620" w:type="dxa"/>
+        <w:shd w:val="clear" w:color="auto" w:fill="FFFFFF" w:themeFill="background1"/>
+      </w:tcPr>
+      <w:p w14:paraId="6FFE5F58" w14:textId="30804498" w:rsidR="00491B4F" w:rsidRPr="00C21858" w:rsidRDefault="00DF0FDF" w:rsidP="00265B50">
+        <w:pPr>
+          <w:pStyle w:val="EMITTable"/>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+        </w:pPr>
+        <w:r>
+          <w:rPr>
+            <w:rFonts w:eastAsia="Arial"/>
+            <w:lang w:val="es-ES"/>
+          </w:rPr>
+          <w:t>-</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+</w:tbl>

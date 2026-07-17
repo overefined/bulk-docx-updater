@@ -161,6 +161,39 @@ appendix.
 Runs before `landscape_table`, so a freshly-inserted table can be located and
 rotated in the same config.
 
+**Replace / remove a block (range of paragraphs + tables)**
+
+Removes a contiguous run of body-level elements (paragraphs and/or tables)
+delimited by two text anchors, optionally inserting new XML in their place.
+Unlike `insert_block` (which only adds) or `replace_table` (which swaps a single
+`<w:tbl>`), this deletes an arbitrary range — so it can drop a whole sub-section
+(a heading + its equation + a table) or swap one for new content, while leaving
+each document's own numbering/layout outside the range untouched.
+
+```json
+{ "replace_block": {"from": "Equation 5-6: System Bias", "to": "HFID ANALYZER ACCURACY"} }
+{ "replace_block": {"from": "Equation 5-7: Drift Assessment", "to": "old last line", "keep_from": true, "replace_file": "eq57.xml"} }
+{ "replace_block": [ {"from": "A", "to": "B"}, {"from": "C", "to": "D", "replace_file": "x.xml"} ] }
+```
+
+- `from`: text of the first anchor (a body paragraph — exact-stripped match
+  preferred, else the first paragraph containing the text).
+- `to`: text identifying the last anchor **at or after** `from` (a paragraph
+  **or** a table — the first body element whose text contains it).
+- `keep_from` / `keep_to` (optional bools, default `false`): if true, that anchor
+  element is left in place and the removed range starts *after* / ends *before*
+  it. Use `keep_from: true` to preserve a section heading while replacing only
+  the body that follows it.
+- `replace` / `replace_file` (optional): XML wrapped in a single root element
+  (e.g. `<block> ... </block>`); its children are inserted where the removed
+  range began and the wrapper is discarded. Omit for a pure deletion. Standard
+  Word namespace prefixes are injected if the root doesn't declare them.
+- `skip_if_present` (optional): if this text already appears in the body, skip.
+
+A run is also naturally idempotent when the edit removes the `to` text (the
+anchor can't be found on a re-run, so it becomes a no-op). Use a list to apply
+several. Runs after `replace_table`, before `insert_block` / `landscape_table`.
+
 **Remove a page break from a paragraph**
 
 Strips every `<w:br w:type="page"/>` from the paragraph located by text (and drops
